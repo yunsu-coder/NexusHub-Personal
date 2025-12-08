@@ -1,0 +1,6 @@
+storage/
+uploads/
+files/
+cache/
+*.log
+.DS_Store
