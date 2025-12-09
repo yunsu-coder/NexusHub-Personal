@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '../api'
+import config from '../config'
 
 export const useThemeStore = defineStore('theme', () => {
   const theme = ref({
@@ -130,6 +131,12 @@ export const useThemeStore = defineStore('theme', () => {
     root.style.setProperty('--border-color', config.borderColor)
     root.style.setProperty('--gradient-primary', config.gradientPrimary)
     root.style.setProperty('--gradient-card', config.gradientCard)
+
+    // 背景图（避免 http 资源导致移动端阻止加载）
+    const bg = normalizeAssetUrl(theme.value.background_image)
+    if (bg) {
+      root.style.setProperty('--app-bg-image', `url('${bg}')`)
+    }
     
     // 移除过渡效果类，以便下次切换时重新应用
     setTimeout(() => {
@@ -152,3 +159,12 @@ export const useThemeStore = defineStore('theme', () => {
     applyTheme
   }
 })
+  function normalizeAssetUrl(url) {
+    if (!url) return ''
+    try {
+      const u = new URL(url)
+      return u.pathname // 转为相对路径，避免混合内容
+    } catch {
+      return url
+    }
+  }
