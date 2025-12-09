@@ -1,5 +1,9 @@
 {
   "rewrites": [
-    { "source": "/api/v1/(.*)", "destination": "http://api.wite.gzhysu.top/api/v1/$1" }
-  ]
+    { "source": "/api/v1/(.*)", "destination": "http://api.wite.gzhysu.top/api/v1/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "env": {
+    "VITE_API_BASE_URL": "/api/v1"
+  }
 }
