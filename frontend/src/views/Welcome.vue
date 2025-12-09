@@ -10,8 +10,8 @@
           <svg class="logo-icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+                <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
               </linearGradient>
             </defs>
             <circle cx="100" cy="100" r="80" fill="url(#logoGradient)" opacity="0.2"/>
@@ -31,88 +31,30 @@
       </div>
 
       <div class="action-buttons">
-        <el-button type="primary" size="large" @click="enter" class="enter-btn">
-          <el-icon style="margin-right: 8px;"><Right /></el-icon>
-          立即体验
-        </el-button>
-        <div class="auth-links">
-          <el-button text @click="showAuthDialog('login')" class="auth-link-btn">
-            <el-icon style="margin-right: 4px;"><User /></el-icon>
-            登录
-          </el-button>
-          <span class="divider">|</span>
-          <el-button text @click="showAuthDialog('register')" class="auth-link-btn">
-            <el-icon style="margin-right: 4px;"><UserFilled /></el-icon>
-            注册
-          </el-button>
+        <div class="loading-animation">
+          <div class="loader"></div>
+          <p>正在加载...</p>
         </div>
+        <el-button class="enter-btn" type="primary" @click="enter">立即进入</el-button>
       </div>
 
       <div class="welcome-footer">
-        <p>v1.0.0 | 功能丰富 | 安全可靠</p>
+        <p>v1.0.3 | 功能丰富 | 安全可靠</p>
       </div>
     </div>
 
-    <!-- 登录注册对话框 -->
-    <el-dialog
-      v-model="authDialogVisible"
-      :title="isLogin ? '登录' : '注册'"
-      width="450px"
-      @close="resetForm"
-    >
-      <el-form :model="formData" :rules="rules" ref="formRef" label-width="80px">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="formData.username" placeholder="请输入用户名" />
-        </el-form-item>
 
-        <el-form-item v-if="!isLogin" label="邮箱" prop="email">
-          <el-input v-model="formData.email" type="email" placeholder="请输入邮箱" />
-        </el-form-item>
-
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="formData.password" type="password" placeholder="请输入密码" show-password />
-        </el-form-item>
-
-        <el-form-item v-if="!isLogin" label="确认密码" prop="confirmPassword">
-          <el-input v-model="formData.confirmPassword" type="password" placeholder="请再次输入密码" show-password />
-        </el-form-item>
-
-        <el-form-item>
-          <el-button type="primary" @click="handleAuth" :loading="loading" style="width: 100%">
-            {{ isLogin ? '登录' : '注册' }}
-          </el-button>
-        </el-form-item>
-      </el-form>
-
-      <div class="auth-switch">
-        <el-button type="text" @click="isLogin = !isLogin">
-          {{ isLogin ? '还没有账号？立即注册' : '已有账号？立即登录' }}
-        </el-button>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '../api'
 import { ElMessage } from 'element-plus'
-import { Right, User, UserFilled } from '@element-plus/icons-vue'
-import axios from 'axios'
 
 const router = useRouter()
 const fireworksCanvas = ref(null)
-const authDialogVisible = ref(false)
-const isLogin = ref(true)
-const formRef = ref()
-const loading = ref(false)
-
-const formData = reactive({
-  username: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
-})
 
 const features = [
   { icon: '📁', text: '文件管理' },
@@ -125,31 +67,13 @@ const features = [
   { icon: '🎨', text: '主题定制' }
 ]
 
-const validatePass2 = (rule, value, callback) => {
-  if (!isLogin.value && value !== formData.password) {
-    callback(new Error('两次输入密码不一致'))
-  } else {
-    callback()
-  }
-}
 
-const rules = reactive({
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少6个字符', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请再次输入密码', trigger: 'blur' },
-    { validator: validatePass2, trigger: 'blur' }
-  ]
+
+// 自动过渡到仪表盘
+onMounted(() => {
+  setTimeout(() => {
+    router.push('/dashboard')
+  }, 1500)
 })
 
 // 烟花动画
@@ -162,12 +86,14 @@ class Firework {
   }
 
   createRocket() {
+    // 浅色调烟花颜色
+    const colors = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa']
     return {
       x: Math.random() * this.canvas.width,
       y: this.canvas.height,
       vx: (Math.random() - 0.5) * 2,
       vy: -(Math.random() * 8 + 12),
-      color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+      color: colors[Math.floor(Math.random() * colors.length)],
       exploded: false
     }
   }
@@ -218,7 +144,7 @@ class Firework {
   }
 
   draw() {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+    this.ctx.fillStyle = 'rgba(240, 249, 255, 0.1)'
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
 
     // 绘制火箭
@@ -295,11 +221,15 @@ const handleAuth = async () => {
         ? { username: formData.username, password: formData.password }
         : { username: formData.username, email: formData.email, password: formData.password }
 
-      const response = await axios.post(`http://localhost:8080/api/v1${endpoint}`, payload)
+      const response = await api.post(endpoint, payload)
 
       // 保存token和用户信息
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+      if (response?.token !== undefined) {
+        localStorage.setItem('token', response.token || '')
+      }
+      if (response?.user !== undefined) {
+        localStorage.setItem('user', JSON.stringify(response.user))
+      }
 
       ElMessage.success(isLogin.value ? '登录成功' : '注册成功')
       authDialogVisible.value = false
@@ -359,7 +289,7 @@ onUnmounted(() => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
   z-index: 9999;
 }
 
@@ -380,7 +310,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: white;
+  color: #1e40af;
   text-align: center;
   padding: 40px;
 }
@@ -398,14 +328,14 @@ onUnmounted(() => {
 .logo-icon {
   width: 150px;
   height: 150px;
-  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 10px 20px rgba(96, 165, 250, 0.3));
 }
 
 .title {
   font-size: 56px;
   font-weight: bold;
   margin: 0 0 15px 0;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+  text-shadow: 2px 2px 8px rgba(96, 165, 250, 0.3);
   letter-spacing: 2px;
 }
 
@@ -413,7 +343,7 @@ onUnmounted(() => {
   font-size: 22px;
   opacity: 0.95;
   margin: 0;
-  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: 1px 1px 4px rgba(96, 165, 250, 0.2);
 }
 
 .features {
@@ -426,18 +356,18 @@ onUnmounted(() => {
 }
 
 .feature-item {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(10px);
   padding: 25px 20px;
   border-radius: 20px;
   transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(96, 165, 250, 0.2);
 }
 
 .feature-item:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.95);
   transform: translateY(-8px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 15px 35px rgba(96, 165, 250, 0.3);
 }
 
 .feature-icon {
@@ -453,7 +383,7 @@ onUnmounted(() => {
 .feature-text {
   font-size: 16px;
   font-weight: 500;
-  color: white;
+  color: #1e40af;
 }
 
 .action-buttons {
@@ -507,10 +437,32 @@ onUnmounted(() => {
   color: #f0f0f0 !important;
 }
 
-.divider {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 18px;
-  user-select: none;
+.loading-animation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loader {
+  width: 60px;
+  height: 60px;
+  border: 5px solid rgba(96, 165, 250, 0.3);
+  border-top: 5px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-animation p {
+  font-size: 20px;
+  font-weight: 500;
+  color: #1e40af;
+  margin: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .welcome-footer {
@@ -518,12 +470,7 @@ onUnmounted(() => {
   bottom: 25px;
   opacity: 0.8;
   font-size: 14px;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.auth-switch {
-  text-align: center;
-  margin-top: 10px;
+  text-shadow: 1px 1px 3px rgba(96, 165, 250, 0.2);
 }
 
 @keyframes fadeInDown {

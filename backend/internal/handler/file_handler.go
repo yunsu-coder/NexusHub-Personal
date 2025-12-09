@@ -1,7 +1,8 @@
 package handler
 
 import (
-	"net/http"
+	"nexushub-personal/internal/common"
+	"nexushub-personal/internal/logger"
 	"nexushub-personal/internal/middleware"
 	"nexushub-personal/internal/service"
 	"strconv"
@@ -22,40 +23,56 @@ func NewFileHandler() *FileHandler {
 
 func (h *FileHandler) GetAll(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
+
 	files, err := h.service.GetAll(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		logger.Error("Failed to get all files: %v, user_id=%d", err, userID)
+		common.InternalServerError(c, "Failed to retrieve files")
 		return
 	}
-	c.JSON(http.StatusOK, files)
+
+	logger.Info("Retrieved %d files for user_id=%d", len(files), userID)
+	common.Success(c, files)
 }
 
 func (h *FileHandler) GetByID(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		logger.Warn("Invalid file ID parameter: %v", err)
+		common.BadRequest(c, "Invalid file ID")
 		return
 	}
 
 	file, err := h.service.GetByID(uint(id), userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		logger.Warn("File not found: id=%d, user_id=%d", id, userID)
+		common.NotFound(c, "File not found")
 		return
 	}
-	c.JSON(http.StatusOK, file)
+
+	common.Success(c, file)
 }
 
 func (h *FileHandler) GetByCategory(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	category := c.Param("category")
 
-	files, err := h.service.GetByCategory(category, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if category == "" {
+		logger.Warn("Empty category parameter")
+		common.BadRequest(c, "Category parameter is required")
 		return
 	}
-	c.JSON(http.StatusOK, files)
+
+	files, err := h.service.GetByCategory(category, userID)
+	if err != nil {
+		logger.Error("Failed to get files by category: %v, category=%s, user_id=%d", err, category, userID)
+		common.InternalServerError(c, "Failed to retrieve files")
+		return
+	}
+
+	logger.Info("Retrieved %d files for category=%s, user_id=%d", len(files), category, userID)
+	common.Success(c, files)
 }
 
 func (h *FileHandler) Upload(c *gin.Context) {
@@ -63,18 +80,25 @@ func (h *FileHandler) Upload(c *gin.Context) {
 
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		logger.Warn("No file in upload request: %v, user_id=%d", err, userID)
+		common.BadRequest(c, "No file uploaded")
 		return
 	}
 
 	uploadedFile, err := h.service.Upload(file, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 错误已在service层记录
+		if err == common.ErrFileToLarge {
+			common.BadRequest(c, err.Error())
+		} else if err == common.ErrInvalidFileType || err == common.ErrInvalidFileName {
+			common.BadRequest(c, err.Error())
+		} else {
+			common.InternalServerError(c, "File upload failed")
+		}
 		return
 	}
 
 	// Generate accessible URL path for the uploaded file
-	// Extract the relative path from uploads/ onwards
 	relativePath := ""
 	if idx := strings.Index(uploadedFile.FilePath, "uploads"); idx != -1 {
 		relativePath = uploadedFile.FilePath[idx:]
@@ -82,7 +106,7 @@ func (h *FileHandler) Upload(c *gin.Context) {
 		relativePath = strings.ReplaceAll(relativePath, "\\", "/")
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	response := gin.H{
 		"id":         uploadedFile.ID,
 		"file_name":  uploadedFile.FileName,
 		"file_size":  uploadedFile.FileSize,
@@ -91,23 +115,28 @@ func (h *FileHandler) Upload(c *gin.Context) {
 		"category":   uploadedFile.Category,
 		"url":        "/" + relativePath,
 		"created_at": uploadedFile.CreatedAt,
-	})
+	}
+
+	common.Created(c, response)
 }
 
 func (h *FileHandler) Download(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		logger.Warn("Invalid file ID for download: %v", err)
+		common.BadRequest(c, "Invalid file ID")
 		return
 	}
 
 	file, err := h.service.GetByID(uint(id), userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		logger.Warn("File not found for download: id=%d, user_id=%d", id, userID)
+		common.NotFound(c, "File not found")
 		return
 	}
 
+	logger.Info("File download: id=%d, filename=%s, user_id=%d", id, file.FileName, userID)
 	c.File(file.FilePath)
 }
 
@@ -115,13 +144,20 @@ func (h *FileHandler) Delete(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		logger.Warn("Invalid file ID for deletion: %v", err)
+		common.BadRequest(c, "Invalid file ID")
 		return
 	}
 
 	if err := h.service.Delete(uint(id), userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 错误已在service层记录
+		if err == common.ErrFileNotFound {
+			common.NotFound(c, "File not found")
+		} else {
+			common.InternalServerError(c, "Failed to delete file")
+		}
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
+
+	common.SuccessWithMessage(c, "File deleted successfully", nil)
 }

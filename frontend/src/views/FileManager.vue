@@ -6,7 +6,7 @@
         ref="uploadRef"
         class="upload-dragger"
         drag
-        :action="`http://localhost:8080/api/v1/files/upload`"
+        :action="uploadUrl"
         :headers="uploadHeaders"
         :on-success="handleUploadSuccess"
         :on-error="handleUploadError"
@@ -42,12 +42,20 @@
     <el-card class="files-section">
       <template #header>
         <div class="card-header">
-          <span>文件列表 ({{ files.length }})</span>
+          <div class="search-box">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索文件名"
+              prefix-icon="Search"
+              clearable
+              style="width: 300px"
+            />
+          </div>
           <el-button type="primary" :icon="Refresh" @click="loadFiles">刷新</el-button>
         </div>
       </template>
 
-      <el-table :data="files" style="width: 100%" v-loading="loading">
+      <el-table :data="filteredFiles" style="width: 100%" v-loading="loading">
         <el-table-column label="文件名" min-width="200">
           <template #default="{ row }">
             <div class="file-name">
@@ -134,6 +142,19 @@
           style="max-width: 100%; max-height: 70vh"
         />
 
+        <!-- 音频预览 -->
+        <audio
+          v-else-if="isAudio(currentPreviewFile)"
+          :src="getFileUrl(currentPreviewFile)"
+          controls
+          style="max-width: 100%; margin: 20px 0"
+        />
+
+        <!-- 代码预览（带语法高亮） -->
+        <pre v-else-if="isCode(currentPreviewFile)" class="code-preview">
+          <code :class="`language-${getCodeLanguage(currentPreviewFile.extension)}`">{{ previewContent }}</code>
+        </pre>
+
         <!-- 文本预览 -->
         <pre v-else-if="isText(currentPreviewFile)" class="text-preview">{{ previewContent }}</pre>
 
@@ -145,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   UploadFilled,
@@ -157,9 +178,13 @@ import {
   Picture,
   VideoPlay,
   Files,
-  Folder
+  Folder,
+  Search
 } from '@element-plus/icons-vue'
 import api from '../api'
+import config from '../config'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
 
 const uploadRef = ref()
 const loading = ref(false)
@@ -168,14 +193,18 @@ const files = ref([])
 const previewVisible = ref(false)
 const currentPreviewFile = ref(null)
 const previewContent = ref('')
+const searchKeyword = ref('')
+const filteredFiles = computed(() => {
+  if (!searchKeyword.value) return files.value
+  return files.value.filter(file => 
+    file.file_name.toLowerCase().includes(searchKeyword.value.toLowerCase())
+  )
+})
 
 // 上传请求头 - 包含JWT token
-const uploadHeaders = computed(() => {
-  const token = localStorage.getItem('token')
-  return {
-    Authorization: `Bearer ${token}`
-  }
-})
+const uploadHeaders = computed(() => ({ }))
+
+const uploadUrl = computed(() => `${config.api.baseURL}/files/upload`)
 
 const loadFiles = async () => {
   loading.value = true
@@ -204,10 +233,16 @@ const previewFile = async (file) => {
   currentPreviewFile.value = file
   previewVisible.value = true
 
-  if (isText(file)) {
+  if (isText(file) || isCode(file)) {
     try {
       const response = await fetch(getFileUrl(file))
       previewContent.value = await response.text()
+      // 延迟执行语法高亮，确保DOM已更新
+      setTimeout(() => {
+        if (isCode(file)) {
+          hljs.highlightAll()
+        }
+      }, 0)
     } catch (error) {
       ElMessage.error('加载文件内容失败')
     }
@@ -221,7 +256,7 @@ const closePreview = () => {
 }
 
 const downloadFile = (file) => {
-  window.open(`http://localhost:8080/api/v1/files/download/${file.id}`, '_blank')
+  window.open(`${config.api.baseURL}/files/download/${file.id}`, '_blank')
 }
 
 const deleteFile = async (file) => {
@@ -242,11 +277,14 @@ const deleteFile = async (file) => {
 const getFileIcon = (ext) => {
   const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
   const videoExts = ['.mp4', '.avi', '.mov', '.mkv', '.webm']
+  const audioExts = ['.mp3', '.wav', '.ogg', '.flac', '.aac']
+  const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz']
 
   if (imageExts.includes(ext?.toLowerCase())) return Picture
-  if (videoExts.includes(ext?.toLowerCase())) return VideoPlay
-  if (['.zip', '.rar', '.7z'].includes(ext?.toLowerCase())) return Files
-  return Document
+    if (videoExts.includes(ext?.toLowerCase())) return VideoPlay
+    if (audioExts.includes(ext?.toLowerCase())) return Document
+    if (archiveExts.includes(ext?.toLowerCase())) return Files
+    return Document
 }
 
 const getCategoryType = (category) => {
@@ -284,19 +322,67 @@ const formatTime = (time) => {
 }
 
 const getFileUrl = (file) => {
-  return `http://localhost:8080/api/v1/files/download/${file.id}`
+  return `${config.api.baseURL}/files/download/${file.id}`
 }
 
 const isImage = (file) => {
-  return file?.category === 'media' && ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'].includes(file.extension?.toLowerCase())
+  return ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'].includes(file.extension?.toLowerCase())
 }
 
 const isVideo = (file) => {
-  return file?.category === 'media' && ['.mp4', '.avi', '.mov', '.mkv', '.webm'].includes(file.extension?.toLowerCase())
+  return ['.mp4', '.avi', '.mov', '.mkv', '.webm'].includes(file.extension?.toLowerCase())
+}
+
+const isAudio = (file) => {
+  return ['.mp3', '.wav', '.ogg', '.flac', '.aac'].includes(file.extension?.toLowerCase())
 }
 
 const isText = (file) => {
-  return ['.txt', '.md', '.json', '.xml', '.csv', '.log'].includes(file.extension?.toLowerCase())
+  return ['.txt', '.md', '.json', '.xml', '.csv', '.log', '.ini', '.yaml', '.yml', '.toml'].includes(file.extension?.toLowerCase())
+}
+
+const isCode = (file) => {
+  return ['.html', '.htm', '.css', '.scss', '.less', '.js', '.jsx', '.ts', '.tsx', 
+          '.java', '.c', '.cpp', '.h', '.hpp', '.go', '.py', '.php', '.rb', '.swift', 
+          '.kt', '.rs', '.vue', '.svelte', '.lua', '.sql', '.sh', '.bash'].includes(file.extension?.toLowerCase())
+}
+
+const getCodeLanguage = (ext) => {
+  const languageMap = {
+    '.html': 'html',
+    '.htm': 'html',
+    '.css': 'css',
+    '.scss': 'scss',
+    '.less': 'less',
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.java': 'java',
+    '.c': 'c',
+    '.cpp': 'cpp',
+    '.h': 'c',
+    '.hpp': 'cpp',
+    '.go': 'go',
+    '.py': 'python',
+    '.php': 'php',
+    '.rb': 'ruby',
+    '.swift': 'swift',
+    '.kt': 'kotlin',
+    '.rs': 'rust',
+    '.vue': 'vue',
+    '.svelte': 'svelte',
+    '.lua': 'lua',
+    '.sql': 'sql',
+    '.sh': 'bash',
+    '.bash': 'bash',
+    '.json': 'json',
+    '.xml': 'xml',
+    '.yaml': 'yaml',
+    '.yml': 'yaml',
+    '.md': 'markdown'
+  }
+  return languageMap[ext?.toLowerCase()] || 'plaintext'
 }
 
 onMounted(() => {
@@ -365,6 +451,29 @@ onMounted(() => {
   border-radius: 4px;
   color: var(--text-primary);
   font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.code-preview {
+  max-height: 70vh;
+  overflow: auto;
+  padding: 20px;
+  background: var(--hover-bg);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.search-box {
+  margin-bottom: 15px;
+}
+
+:deep(.el-table__header-wrapper th) {
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
+:deep(.el-table__body-wrapper tr:hover td) {
+  background-color: var(--hover-bg) !important;
 }
 
 .preview-content {

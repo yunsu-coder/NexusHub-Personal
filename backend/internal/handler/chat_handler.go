@@ -2,10 +2,12 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
+
+	"nexushub-personal/internal/common"
 	"nexushub-personal/internal/middleware"
 	"nexushub-personal/internal/model"
 	"nexushub-personal/internal/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,10 +29,10 @@ func (h *ChatHandler) GetHistory(c *gin.Context) {
 
 	messages, err := h.service.GetHistory(userID, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.InternalServerError(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, messages)
+	common.Success(c, messages)
 }
 
 func (h *ChatHandler) SendMessage(c *gin.Context) {
@@ -40,7 +42,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		common.BadRequest(c, err.Error())
 		return
 	}
 
@@ -51,7 +53,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		Content: req.Content,
 	}
 	if err := h.service.Create(userMessage); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.InternalServerError(c, err.Error())
 		return
 	}
 
@@ -63,11 +65,11 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		Content: "AI功能待接入，当前为回显模式: " + req.Content,
 	}
 	if err := h.service.Create(aiResponse); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.InternalServerError(c, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	common.Success(c, gin.H{
 		"user_message": userMessage,
 		"ai_response":  aiResponse,
 	})
@@ -76,8 +78,8 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 func (h *ChatHandler) ClearHistory(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	if err := h.service.DeleteHistory(userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.InternalServerError(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Chat history cleared successfully"})
+	common.SuccessWithMessage(c, "Chat history cleared successfully", nil)
 }

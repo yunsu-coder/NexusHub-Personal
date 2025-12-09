@@ -10,7 +10,7 @@
 
           <el-upload
             ref="uploadRef"
-            :action="`http://localhost:8080/api/v1/files/upload`"
+            :action="uploadUrl"
             :headers="uploadHeaders"
             :on-success="handleUploadSuccess"
             :on-error="handleUploadError"
@@ -145,6 +145,7 @@ import { UploadFilled } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import * as XLSX from 'xlsx'
 import * as pdfjsLib from 'pdfjs-dist'
+import config from '../config'
 
 // 配置 PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
@@ -181,19 +182,17 @@ const numericColumns = computed(() => {
 })
 
 const beforeUpload = (file) => {
-  const isValidType = file.name.endsWith('.csv') ||
-                     file.name.endsWith('.xlsx') ||
-                     file.name.endsWith('.xlsm') ||
-                     file.name.endsWith('.xls') ||
-                     file.name.endsWith('.pdf')
+  const allowedExtensions = ['.csv', '.xlsx', '.xlsm', '.xls', '.pdf']
+  const fileExtension = '.' + file.name.toLowerCase().split('.').pop()
+  const isValidType = allowedExtensions.includes(fileExtension)
   const isLt50M = file.size / 1024 / 1024 < 50
 
   if (!isValidType) {
-    ElMessage.error('只支持 CSV, Excel (xls/xlsx/xlsm) 和 PDF 文件！')
+    ElMessage.error(`文件格式不支持！请上传以下格式的文件：${allowedExtensions.join(', ')}`)
     return false
   }
   if (!isLt50M) {
-    ElMessage.error('文件大小不能超过 50MB！')
+    ElMessage.error(`文件大小超出限制！最大支持 50MB，当前文件大小：${(file.size / 1024 / 1024).toFixed(2)}MB`)
     return false
   }
   return true
@@ -211,14 +210,29 @@ const handleUploadSuccess = async (response, file) => {
   }
 }
 
-const handleUploadError = () => {
-  ElMessage.error('文件上传失败')
+const handleUploadError = (error) => {
+  // 解析错误信息
+  let errorMsg = '文件上传失败'
+  try {
+    const errorData = JSON.parse(error.message)
+    if (errorData && errorData.error) {
+      errorMsg += `: ${errorData.error}`
+    }
+  } catch {
+    // 如果无法解析JSON，使用原始错误信息
+    if (error.response && error.response.status) {
+      errorMsg += ` (HTTP ${error.response.status})`
+    }
+  }
+  ElMessage.error(errorMsg)
 }
 
 const parseFile = async (fileId, filename) => {
-  const fileUrl = `http://localhost:8080/api/v1/files/download/${fileId}`
+  const fileUrl = `${config.api.baseURL}/files/download/${fileId}`
 
   try {
+    ElMessage.info('正在解析文件，请稍候...')
+    
     // 根据文件扩展名判断类型
     const ext = filename.toLowerCase().split('.').pop()
 
@@ -229,7 +243,12 @@ const parseFile = async (fileId, filename) => {
     } else if (ext === 'pdf') {
       await parsePDF(fileUrl)
     } else {
-      throw new Error('不支持的文件格式')
+      throw new Error(`不支持的文件格式: ${ext}`)
+    }
+
+    // 检查是否有解析到数据
+    if (fullData.value.length === 0) {
+      throw new Error('文件中没有找到有效的数据')
     }
 
     totalRows.value = fullData.value.length
@@ -239,7 +258,6 @@ const parseFile = async (fileId, filename) => {
     calculateStatistics()
 
     dataLoaded.value = true
-    ElMessage.success('数据解析成功！')
 
     // 初始化图表
     await nextTick()
@@ -248,9 +266,17 @@ const parseFile = async (fileId, filename) => {
       initChart()
       updateChart()
     }
+
+    // 显示成功消息
+    ElMessage.success(`文件解析成功！共解析 ${fullData.value.length} 行数据，${columns.value.length} 个字段`)
   } catch (error) {
-    console.error('Parse error:', error)
-    throw error
+    console.error('文件解析失败:', error)
+    // 根据错误类型提供更具体的反馈
+    let errorMsg = '文件解析失败'
+    if (error.message) {
+      errorMsg += `: ${error.message}`
+    }
+    ElMessage.error(errorMsg)
   }
 }
 
@@ -750,3 +776,4 @@ onMounted(() => {
   line-height: 1.6;
 }
 </style>
+const uploadUrl = computed(() => `${config.api.baseURL}/files/upload`)

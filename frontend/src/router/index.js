@@ -22,12 +22,7 @@ const router = createRouter({
       component: () => import('../views/FileManager.vue'),
       meta: { requiresAuth: false }
     },
-    {
-      path: '/code',
-      name: 'Code',
-      component: () => import('../views/CodeEditor.vue'),
-      meta: { requiresAuth: false }
-    },
+
     {
       path: '/notes',
       name: 'Notes',
@@ -38,12 +33,6 @@ const router = createRouter({
       path: '/data',
       name: 'DataAnalysis',
       component: () => import('../views/DataAnalysis.vue'),
-      meta: { requiresAuth: false }
-    },
-    {
-      path: '/calculator',
-      name: 'Calculator',
-      component: () => import('../views/Calculator.vue'),
       meta: { requiresAuth: false }
     },
     {
@@ -63,21 +52,20 @@ const router = createRouter({
       name: 'Settings',
       component: () => import('../views/Settings.vue'),
       meta: { requiresAuth: false }
+    },
+    {
+      path: '/collection',
+      name: 'Collection',
+      component: () => import('../views/Collection.vue'),
+      meta: { requiresAuth: false }
     }
   ]
 })
 
-// 路由守卫 - 可选的身份验证
+// 公共模式：不进行鉴权重定向
+// 直接放行所有路由
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-
-  // 如果已登录且访问欢迎页，重定向到仪表盘
-  if (to.path === '/' && token) {
-    next('/dashboard')
-  } else {
-    next()
-  }
+  next()
 })
 
 export default router
-

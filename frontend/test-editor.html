@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .test-info {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #409EFF;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h2>代码编辑器修复测试</h2>
+        <p>修复内容：</p>
+        <ul>
+            <li>为Monaco Editor组件添加了明确的高度和宽度样式</li>
+            <li>修改了容器CSS，使用固定高度和!important确保样式生效</li>
+            <li>确保编辑器能够自动适应布局变化</li>
+        </ul>
+    </div>
+    
+    <div class="instructions">
+        <h3>测试步骤：</h3>
+        <ol>
+            <li>打开前端开发服务器：http://localhost:5173/</li>
+            <li>导航到「代码编辑」页面</li>
+            <li>点击「新建」按钮创建一个新的代码片段</li>
+            <li>检查编辑器是否显示完整的编辑区域</li>
+            <li>尝试在编辑器中输入代码，检查是否可以正常编辑</li>
+            <li>切换到预览模式，检查代码高亮是否正常</li>
+        </ol>
+    </div>
+</body>
+</html>

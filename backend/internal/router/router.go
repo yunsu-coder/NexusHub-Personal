@@ -12,6 +12,7 @@ func SetupRouter() *gin.Engine {
 
 	// Middleware
 	r.Use(middleware.CORS())
+	r.Use(middleware.RequestLogger())
 
 	// Serve static files from uploads directory
 	r.Static("/uploads", "./storage/uploads")
@@ -80,6 +81,17 @@ func SetupRouter() *gin.Engine {
 			bookmarks.DELETE("/:id", bookmarkHandler.Delete)
 		}
 
+		// Events
+		eventHandler := handler.NewEventHandler()
+		events := v1.Group("/events")
+		{
+			events.GET("", eventHandler.GetAllEvents)
+			events.GET("/:id", eventHandler.GetEventByID)
+			events.POST("", eventHandler.CreateEvent)
+			events.PUT("/:id", eventHandler.UpdateEvent)
+			events.DELETE("/:id", eventHandler.DeleteEvent)
+		}
+
 		// Files
 		fileHandler := handler.NewFileHandler()
 		files := v1.Group("/files")
@@ -90,18 +102,6 @@ func SetupRouter() *gin.Engine {
 			files.POST("/upload", fileHandler.Upload)
 			files.GET("/download/:id", fileHandler.Download)
 			files.DELETE("/:id", fileHandler.Delete)
-		}
-
-		// Code Snippets
-		codeHandler := handler.NewCodeHandler()
-		code := v1.Group("/code")
-		{
-			code.GET("", codeHandler.GetAll)
-			code.GET("/:id", codeHandler.GetByID)
-			code.GET("/language/:language", codeHandler.GetByLanguage)
-			code.POST("", codeHandler.Create)
-			code.PUT("/:id", codeHandler.Update)
-			code.DELETE("/:id", codeHandler.Delete)
 		}
 
 		// Theme
@@ -119,6 +119,17 @@ func SetupRouter() *gin.Engine {
 			chat.GET("/history", chatHandler.GetHistory)
 			chat.POST("/message", chatHandler.SendMessage)
 			chat.DELETE("/history", chatHandler.ClearHistory)
+		}
+
+		// Collection
+		collectionHandler := handler.NewCollectionHandler()
+		collection := v1.Group("/collections")
+		{
+			collection.GET("", collectionHandler.GetAllCollections)
+			collection.GET("/:id", collectionHandler.GetCollectionByID)
+			collection.POST("", collectionHandler.CreateCollection)
+			collection.PUT("/:id", collectionHandler.UpdateCollection)
+			collection.DELETE("/:id", collectionHandler.DeleteCollection)
 		}
 	}
 

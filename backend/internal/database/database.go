@@ -57,9 +57,10 @@ func autoMigrate() error {
 		&model.File{},
 		&model.Task{},
 		&model.Bookmark{},
-		&model.CodeSnippet{},
 		&model.Theme{},
 		&model.ChatMessage{},
+		&model.Collection{},
+		&model.Event{},
 	)
 }
 
@@ -97,6 +98,7 @@ func initDefaultTheme() error {
 			ThemeName:      "dark",
 			PrimaryColor:   "#000000",
 			SecondaryColor: "#ffffff",
+			ThemeTemplate:  "default",
 			MusicVolume:    0.5,
 		}
 		if err := DB.Create(defaultTheme).Error; err != nil {

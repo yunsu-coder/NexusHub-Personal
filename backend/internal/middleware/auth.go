@@ -2,14 +2,13 @@ package middleware
 
 import (
 	"net/http"
+	"nexushub-personal/internal/config"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
-
-var jwtSecret = []byte("nexushub-secret-key-2024") // 生产环境应从配置文件读取
 
 type Claims struct {
 	UserID   uint   `json:"user_id"`
@@ -19,24 +18,26 @@ type Claims struct {
 
 // GenerateToken 生成JWT token
 func GenerateToken(userID uint, username string) (string, error) {
+	expireHours := time.Duration(config.AppConfig.JWT.ExpireHours) * time.Hour
+
 	claims := Claims{
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)), // 7天有效期
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expireHours)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString([]byte(config.AppConfig.JWT.Secret))
 }
 
 // ParseToken 解析JWT token
 func ParseToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+		return []byte(config.AppConfig.JWT.Secret), nil
 	})
 
 	if err != nil {
@@ -96,9 +97,9 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
-		// 如果没有Authorization header,以访客身份继续
+		// 如果没有Authorization header,使用默认用户ID
 		if authHeader == "" {
-			c.Set("user_id", uint(0))
+			c.Set("user_id", uint(config.AppConfig.User.DefaultUserID))
 			c.Set("username", "guest")
 			c.Next()
 			return
@@ -117,8 +118,8 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		// Token无效,以访客身份继续
-		c.Set("user_id", uint(0))
+		// Token无效,使用默认用户ID
+		c.Set("user_id", uint(config.AppConfig.User.DefaultUserID))
 		c.Set("username", "guest")
 		c.Next()
 	}

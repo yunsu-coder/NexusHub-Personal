@@ -2,10 +2,12 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
+
+	"nexushub-personal/internal/common"
 	"nexushub-personal/internal/middleware"
 	"nexushub-personal/internal/model"
 	"nexushub-personal/internal/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,49 +26,49 @@ func (h *NoteHandler) GetAll(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	notes, err := h.service.GetAll(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.InternalServerError(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, notes)
+	common.Success(c, notes)
 }
 
 func (h *NoteHandler) GetByID(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		common.BadRequest(c, "Invalid ID")
 		return
 	}
 
 	note, err := h.service.GetByID(uint(id), userID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+		common.NotFound(c, "Note not found")
 		return
 	}
-	c.JSON(http.StatusOK, note)
+	common.Success(c, note)
 }
 
 func (h *NoteHandler) Create(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	var note model.Note
 	if err := c.ShouldBindJSON(&note); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		common.BadRequest(c, err.Error())
 		return
 	}
 
 	note.UserID = userID
 	if err := h.service.Create(&note); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.InternalServerError(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusCreated, note)
+	common.Created(c, note)
 }
 
 func (h *NoteHandler) Update(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		common.BadRequest(c, "Invalid ID")
 		return
 	}
 
@@ -79,23 +81,23 @@ func (h *NoteHandler) Update(c *gin.Context) {
 	note.ID = uint(id)
 	note.UserID = userID
 	if err := h.service.Update(&note); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.InternalServerError(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, note)
+	common.Success(c, note)
 }
 
 func (h *NoteHandler) Delete(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		common.BadRequest(c, "Invalid ID")
 		return
 	}
 
 	if err := h.service.Delete(uint(id), userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.InternalServerError(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Note deleted successfully"})
+	common.SuccessWithMessage(c, "Note deleted successfully", nil)
 }

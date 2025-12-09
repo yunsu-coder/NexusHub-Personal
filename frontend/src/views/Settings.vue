@@ -26,26 +26,14 @@
           </div>
 
           <div class="setting-item">
-            <label>背景图片</label>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px">
-              <el-input v-model="theme.background_image" placeholder="输入图片 URL..." @change="saveTheme" style="flex: 1" />
-              <el-button @click="previewBackgroundImage" :disabled="!theme.background_image">预览</el-button>
-            </div>
-            <el-upload
-              :action="`http://localhost:8080/api/v1/files/upload`"
-              :headers="uploadHeaders"
-              :show-file-list="false"
-              accept="image/*"
-              :on-success="handleImageUploadSuccess"
-              :before-upload="beforeImageUpload"
-            >
-              <el-button type="primary" size="small">本地上传图片</el-button>
-            </el-upload>
-          </div>
-
-          <div class="setting-item">
-            <label>背景图片透明度: {{ Math.round(theme.background_opacity * 100) }}%</label>
-            <el-slider v-model="theme.background_opacity" :min="0" :max="1" :step="0.05" @change="saveTheme" />
+            <label>主题模板</label>
+            <el-radio-group v-model="theme.theme_template" @change="applyThemeTemplate">
+              <el-radio-button label="default">默认主题</el-radio-button>
+              <el-radio-button label="neon">霓虹主题</el-radio-button>
+              <el-radio-button label="forest">森林主题</el-radio-button>
+              <el-radio-button label="ocean">海洋主题</el-radio-button>
+              <el-radio-button label="sunset">日落主题</el-radio-button>
+            </el-radio-group>
           </div>
         </el-card>
 
@@ -107,33 +95,12 @@
             <span>🎵 音乐设置</span>
           </template>
 
-          <div class="setting-item">
-            <label>背景音乐</label>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px">
-              <el-input v-model="theme.background_music" placeholder="输入音乐 URL..." @change="saveTheme" style="flex: 1" />
-              <el-button @click="previewBackgroundMusic" :disabled="!theme.background_music">预览</el-button>
-            </div>
-            <el-upload
-              :action="`http://localhost:8080/api/v1/files/upload`"
-              :headers="uploadHeaders"
-              :show-file-list="false"
-              accept="audio/*"
-              :on-success="handleMusicUploadSuccess"
-              :before-upload="beforeMusicUpload"
-            >
-              <el-button type="primary" size="small">本地上传音乐</el-button>
-            </el-upload>
-          </div>
 
-          <div class="setting-item">
-            <label>音量: {{ Math.round(theme.music_volume * 100) }}%</label>
-            <el-slider v-model="theme.music_volume" :min="0" :max="1" :step="0.1" @change="saveTheme" />
-          </div>
 
           <div class="setting-item" style="margin-top: 30px">
             <el-alert title="提示" type="info" :closable="false">
               <p>• 主题更改会立即生效</p>
-              <p>• 背景音乐支持 MP3、WAV 等格式</p>
+  
               <p>• 所有设置自动保存</p>
             </el-alert>
           </div>
@@ -146,7 +113,7 @@
 
           <div class="info-item">
             <span>版本</span>
-            <el-tag>v1.0.0</el-tag>
+            <el-tag>v1.0.3</el-tag>
           </div>
 
           <div class="info-item">
@@ -189,10 +156,8 @@ const theme = ref({
   theme_name: 'dark',
   primary_color: '#000000',
   secondary_color: '#ffffff',
-  background_image: '',
-  background_opacity: 1.0,
-  background_music: '',
-  music_volume: 0.5
+  theme_template: 'default',
+
 })
 
 const aiSettings = ref({
@@ -209,55 +174,41 @@ const uploadHeaders = computed(() => {
   }
 })
 
-// 图片上传前验证
-const beforeImageUpload = (file) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt5M = file.size / 1024 / 1024 < 5
-
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件!')
-    return false
+// 应用主题模板
+const applyThemeTemplate = () => {
+  const templates = {
+    default: {
+      primary_color: '#000000',
+      secondary_color: '#ffffff'
+    },
+    neon: {
+      primary_color: '#00ff00',
+      secondary_color: '#ff00ff'
+    },
+    forest: {
+      primary_color: '#006400',
+      secondary_color: '#228B22'
+    },
+    ocean: {
+      primary_color: '#000080',
+      secondary_color: '#00BFFF'
+    },
+    sunset: {
+      primary_color: '#FF6347',
+      secondary_color: '#FFD700'
+    }
   }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过 5MB!')
-    return false
-  }
-  return true
-}
 
-// 音乐上传前验证
-const beforeMusicUpload = (file) => {
-  const isAudio = file.type.startsWith('audio/')
-  const isLt20M = file.size / 1024 / 1024 < 20
-
-  if (!isAudio) {
-    ElMessage.error('只能上传音频文件!')
-    return false
-  }
-  if (!isLt20M) {
-    ElMessage.error('音频大小不能超过 20MB!')
-    return false
-  }
-  return true
-}
-
-// 图片上传成功
-const handleImageUploadSuccess = (response) => {
-  if (response && response.url) {
-    theme.value.background_image = `http://localhost:8080${response.url}`
+  const selectedTemplate = templates[theme.value.theme_template]
+  if (selectedTemplate) {
+    theme.value.primary_color = selectedTemplate.primary_color
+    theme.value.secondary_color = selectedTemplate.secondary_color
     saveTheme()
-    ElMessage.success('背景图片上传成功')
+    ElMessage.success('主题模板已应用')
   }
 }
 
-// 音乐上传成功
-const handleMusicUploadSuccess = (response) => {
-  if (response && response.url) {
-    theme.value.background_music = `http://localhost:8080${response.url}`
-    saveTheme()
-    ElMessage.success('背景音乐上传成功')
-  }
-}
+
 
 const loadTheme = async () => {
   try {
@@ -306,33 +257,9 @@ const handleModelChange = () => {
   saveAISettings()
 }
 
-const previewBackgroundImage = () => {
-  if (!theme.value.background_image) return
 
-  const img = new Image()
-  img.onload = () => {
-    ElMessage.success('图片加载成功！')
-    // 临时应用预览
-    document.documentElement.style.setProperty('--bg-image', `url(${theme.value.background_image})`)
-  }
-  img.onerror = () => {
-    ElMessage.error('图片加载失败，请检查 URL 是否正确')
-  }
-  img.src = theme.value.background_image
-}
 
-const previewBackgroundMusic = () => {
-  if (!theme.value.background_music) return
 
-  const audio = new Audio()
-  audio.oncanplay = () => {
-    ElMessage.success('音乐加载成功！可以在侧边栏播放')
-  }
-  audio.onerror = () => {
-    ElMessage.error('音乐加载失败，请检查 URL 是否正确')
-  }
-  audio.src = theme.value.background_music
-}
 
 const testAIConnection = async () => {
   if (!aiSettings.value.apiKey) {

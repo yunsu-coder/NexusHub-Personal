@@ -44,7 +44,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
+import api from '../api'
 
 const router = useRouter()
 const formRef = ref()
@@ -98,11 +98,15 @@ const handleSubmit = async () => {
         ? { username: formData.username, password: formData.password }
         : { username: formData.username, email: formData.email, password: formData.password }
 
-      const response = await axios.post(`http://localhost:8080/api/v1${endpoint}`, payload)
+      const response = await api.post(endpoint, payload)
 
       // 保存token和用户信息
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+      if (response?.token !== undefined) {
+        localStorage.setItem('token', response.token || '')
+      }
+      if (response?.user !== undefined) {
+        localStorage.setItem('user', JSON.stringify(response.user))
+      }
 
       ElMessage.success(isLogin.value ? '登录成功' : '注册成功')
 

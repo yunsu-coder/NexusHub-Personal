@@ -52,7 +52,8 @@
               <el-button size="small" text @click="$router.push('/todos')">查看全部</el-button>
             </div>
           </template>
-          <div v-if="todayTodos.length === 0" class="empty-state">
+          <el-skeleton v-if="isLoading" rows="4" animated />
+          <div v-else-if="todayTodos.length === 0" class="empty-state">
             <el-empty description="今天没有待办事项" :image-size="100" />
           </div>
           <div v-else class="todo-list">
@@ -76,7 +77,8 @@
               <el-button size="small" text @click="$router.push('/files')">查看全部</el-button>
             </div>
           </template>
-          <div v-if="recentFiles.length === 0" class="empty-state">
+          <el-skeleton v-if="isLoading" rows="4" animated />
+          <div v-else-if="recentFiles.length === 0" class="empty-state">
             <el-empty description="暂无文件" :image-size="100" />
           </div>
           <div v-else class="file-list">
@@ -115,10 +117,6 @@
             <div class="action-btn" @click="$router.push('/chat')">
               <el-icon size="24"><el-icon-chat-line-round /></el-icon>
               <span>AI 对话</span>
-            </div>
-            <div class="action-btn" @click="$router.push('/calculator')">
-              <el-icon size="24"><el-icon-promotion /></el-icon>
-              <span>计算器</span>
             </div>
             <div class="action-btn" @click="$router.push('/data')">
               <el-icon size="24"><el-icon-data-analysis /></el-icon>
@@ -184,6 +182,7 @@ const stats = ref({
 
 const recentFiles = ref([])
 const todayTodos = ref([])
+const isLoading = ref(true)
 
 const greetingMessage = computed(() => {
   const hour = new Date().getHours()
@@ -265,16 +264,15 @@ const updateDateTime = () => {
 
 const loadStats = async () => {
   try {
-    const [files, notes, code, todos] = await Promise.all([
+    const [files, notes, todos] = await Promise.all([
       api.get('/files'),
       api.get('/notes'),
-      api.get('/code'),
       api.get('/todos').catch(() => [])
     ])
 
     stats.value.fileCount = files.length
     stats.value.noteCount = notes.length
-    stats.value.codeCount = code.length
+    stats.value.codeCount = 0 // 暂时设置为0，等待后端实现code接口
     stats.value.todoCount = todos.length
     stats.value.completedTodos = todos.filter(t => t.status === 'completed').length
 
@@ -289,6 +287,9 @@ const loadStats = async () => {
     }))
   } catch (error) {
     console.error('Failed to load stats:', error)
+  }
+  finally {
+    isLoading.value = false
   }
 }
 
@@ -366,80 +367,124 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard {
+  padding: 24px;
   animation: fadeIn 0.5s ease;
 }
 
+/* 欢迎卡片 */
 .welcome-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
+  background: var(--gradient-primary);
+  border: 1px solid var(--border-color);
   color: white;
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 24px;
+  animation: slideInUp 0.5s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -25%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: pulse 3s infinite;
 }
 
 .welcome-card :deep(.el-card__body) {
-  padding: 30px;
+  padding: 36px;
+  position: relative;
+  z-index: 1;
 }
 
 .welcome-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 30px;
 }
 
 .welcome-text h1 {
-  margin: 0 0 10px 0;
-  font-size: 32px;
-  font-weight: bold;
+  margin: 0 0 16px 0;
+  font-size: 36px;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: slideInLeft 0.5s ease 0.1s both;
 }
 
 .welcome-text p {
-  margin: 0 0 15px 0;
-  font-size: 18px;
-  opacity: 0.9;
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  opacity: 0.95;
+  font-weight: 500;
+  animation: slideInLeft 0.5s ease 0.2s both;
 }
 
 .datetime {
   display: flex;
-  gap: 15px;
-  font-size: 14px;
-  opacity: 0.8;
+  gap: 20px;
+  font-size: 16px;
+  opacity: 0.9;
+  animation: slideInLeft 0.5s ease 0.3s both;
 }
 
 .time {
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.welcome-stats {
+  animation: slideInRight 0.5s ease 0.4s both;
 }
 
 .percentage-value {
   display: block;
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 700;
 }
 
 .percentage-label {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 5px;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
+/* 统计卡片 */
 .stat-card {
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   overflow: hidden;
+  margin-bottom: 24px;
+  position: relative;
 }
 
 /* 拟物风格卡片 */
 .neumorphism {
-  background: var(--card-bg);
-  box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.1),
-             -8px -8px 16px rgba(255, 255, 255, 0.05);
+  background: var(--gradient-card);
+  box-shadow: var(--shadow-md);
   border-radius: 16px;
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--border-color);
+  animation: slideInUp 0.5s ease calc(var(--index) * 0.1s + 0.2s) both;
 }
 
 .neumorphism:hover {
-  transform: translateY(-3px);
-  box-shadow: 12px 12px 24px rgba(0, 0, 0, 0.15),
-             -12px -12px 24px rgba(255, 255, 255, 0.05);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-xl);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.stat-card :deep(.el-card__body) {
+  padding: 24px;
 }
 
 .stat-content {
@@ -450,16 +495,38 @@ onUnmounted(() => {
 
 /* 拟物图标容器 */
 .stat-icon-neu {
-  width: 80px;
-  height: 80px;
+  width: 85px;
+  height: 85px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 16px;
   background: var(--card-bg);
-  box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.1),
-              inset -4px -4px 8px rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-sm), inset var(--shadow-inset);
   flex-shrink: 0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-icon-neu::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card:hover .stat-icon-neu {
+  box-shadow: var(--shadow-md), inset var(--shadow-inset-lg);
+}
+
+.stat-card:hover .stat-icon-neu::before {
+  opacity: 0.1;
 }
 
 .stat-info {
@@ -467,47 +534,78 @@ onUnmounted(() => {
 }
 
 .stat-info h3 {
-  margin: 0 0 5px 0;
-  font-size: 32px;
-  font-weight: bold;
+  margin: 0 0 8px 0;
+  font-size: 36px;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -1px;
 }
 
 .stat-info p {
-  margin: 0 0 8px 0;
-  font-size: 14px;
+  margin: 0 0 10px 0;
+  font-size: 15px;
   color: var(--text-secondary);
   font-weight: 500;
 }
 
 .stat-trend {
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 .stat-trend.up {
-  color: #67c23a;
+  color: #43e97b;
+  background: rgba(67, 233, 123, 0.1);
 }
 
 .stat-trend.down {
-  color: #f56c6c;
+  color: #f5576c;
+  background: rgba(245, 87, 108, 0.1);
 }
 
+/* 内容卡片 */
 .content-card {
   height: 400px;
   display: flex;
   flex-direction: column;
+  background: var(--card-bg);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  animation: slideInUp 0.5s ease calc(var(--index) * 0.1s + 0.4s) both;
 }
 
 .content-card :deep(.el-card__body) {
   flex: 1;
   overflow-y: auto;
+  padding: 20px;
+}
+
+.content-card :deep(.el-card__header) {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.card-header :deep(.el-button) {
+  color: var(--primary-color);
+  font-weight: 500;
 }
 
 .empty-state {
@@ -517,30 +615,39 @@ onUnmounted(() => {
   height: 100%;
 }
 
+.empty-state :deep(.el-empty__description) {
+  color: var(--text-secondary);
+}
+
+/* 待办事项 */
 .todo-list, .file-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .todo-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px;
-  background: var(--hover-bg);
-  border-radius: 8px;
-  transition: all 0.3s;
+  gap: 12px;
+  padding: 14px;
+  background: var(--sidebar-hover);
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
 }
 
 .todo-item:hover {
-  background: var(--border-color);
-  transform: translateX(5px);
+  background: rgba(102, 126, 234, 0.1);
+  transform: translateX(8px);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .todo-item span {
   flex: 1;
   color: var(--text-primary);
+  font-weight: 500;
 }
 
 .todo-item span.completed {
@@ -548,57 +655,85 @@ onUnmounted(() => {
   opacity: 0.6;
 }
 
+.todo-item :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.todo-item :deep(.el-tag) {
+  margin-left: auto;
+}
+
+/* 文件列表 */
 .file-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--hover-bg);
-  border-radius: 8px;
+  gap: 14px;
+  padding: 14px;
+  background: var(--sidebar-hover);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
 }
 
 .file-item:hover {
-  background: var(--border-color);
-  transform: translateX(5px);
+  background: rgba(102, 126, 234, 0.1);
+  transform: translateX(8px);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .file-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: bold;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: 14px;
   text-transform: uppercase;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  background: var(--gradient-primary);
+  transition: transform 0.3s ease;
+}
+
+.file-item:hover .file-icon {
+  transform: scale(1.1);
 }
 
 .file-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .file-name {
   color: var(--text-primary);
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .file-meta {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
+/* 快速操作 */
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .action-btn {
@@ -606,44 +741,91 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 20px;
-  background: linear-gradient(135deg, var(--hover-bg) 0%, var(--card-bg) 100%);
+  gap: 10px;
+  padding: 24px 16px;
+  background: linear-gradient(135deg, var(--sidebar-hover) 0%, var(--card-bg) 100%);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 0;
 }
 
 .action-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  border-color: #409eff;
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
+}
+
+.action-btn:hover::before {
+  opacity: 0.1;
+}
+
+.action-btn :deep(.el-icon) {
+  font-size: 36px;
+  color: var(--primary-color);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.action-btn:hover :deep(.el-icon) {
+  color: var(--primary-color);
+  transform: scale(1.15);
 }
 
 .action-btn span {
   color: var(--text-primary);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
+.action-btn:hover span {
+  color: var(--primary-color);
+}
+
+/* 数据概览 */
 .overview-item {
   text-align: center;
-  padding: 20px;
+  padding: 24px;
 }
 
 .overview-item h4 {
-  margin: 0 0 15px 0;
+  margin: 0 0 20px 0;
   color: var(--text-primary);
   font-size: 16px;
+  font-weight: 600;
 }
 
 .overview-item p {
-  margin: 10px 0 0 0;
+  margin: 12px 0 0 0;
   font-size: 14px;
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
+.overview-item :deep(.el-progress) {
+  margin-bottom: 8px;
+}
+
+/* 动画 */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -653,5 +835,101 @@ onUnmounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 16px;
+  }
+
+  .welcome-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .welcome-text h1 {
+    font-size: 28px;
+  }
+
+  .welcome-text p {
+    font-size: 16px;
+  }
+
+  .welcome-card :deep(.el-card__body) {
+    padding: 28px 20px;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+}
+
+/* 平滑滚动 */
+.content-card :deep(.el-card__body)::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-card :deep(.el-card__body)::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+.content-card :deep(.el-card__body)::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.content-card :deep(.el-card__body)::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 </style>
