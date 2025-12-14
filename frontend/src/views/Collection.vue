@@ -17,7 +17,13 @@
           clearable
           prefix-icon="el-icon-Search"
           class="search-input"
-        />
+        >
+          <template #append>
+             <el-button @click="showUrlDialog = true">
+                <el-icon><Link /></el-icon> 爬取
+             </el-button>
+          </template>
+        </el-input>
       </div>
       <div class="filter-actions">
         <el-select
@@ -221,6 +227,62 @@
             @keyup.enter="addTag"
           />
         </el-form-item>
+
+        <div v-if="currentItem.resources && currentItem.resources.length > 0" class="detected-resources">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h4>检测到的资源 (点击选择)</h4>
+              <div v-if="imageResources.length > 0">
+                <el-checkbox v-model="selectAllImages" @change="handleSelectAllImages">全选图片</el-checkbox>
+                <el-button type="primary" size="small" @click="batchAddImages" :disabled="selectedResourceIndices.length === 0">
+                  批量添加 ({{ selectedResourceIndices.length }})
+                </el-button>
+              </div>
+            </div>
+            
+            <!-- 图片资源网格 -->
+            <div v-if="imageResources.length > 0" class="resource-section">
+              <div class="resource-grid">
+                <div 
+                  v-for="(res, idx) in imageResources" 
+                  :key="idx" 
+                  class="resource-grid-item"
+                  :class="{ selected: selectedResourceIndices.includes(idx) }"
+                  @click="toggleResourceSelection(idx)"
+                >
+                  <el-image 
+                    :src="res.url" 
+                    fit="cover" 
+                    loading="lazy"
+                    draggable="false"
+                    style="pointer-events: none;"
+                  >
+                    <template #error>
+                      <div class="image-slot">
+                        <el-icon><PictureFilled /></el-icon>
+                      </div>
+                    </template>
+                  </el-image>
+                  <div class="resource-overlay">
+                    <el-icon v-if="selectedResourceIndices.includes(idx)"><Check /></el-icon>
+                    <el-icon v-else><Plus /></el-icon>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          <!-- 其他资源列表 -->
+          <div v-if="otherResources.length > 0" class="resource-list">
+            <div 
+              v-for="(res, idx) in otherResources" 
+              :key="idx" 
+              class="resource-item"
+              @click="selectResource(res)"
+            >
+              <el-tag size="small" :type="getResourceTypeTag(res.type)">{{ res.type }}</el-tag>
+              <span class="resource-url" :title="res.url">{{ res.url }}</span>
+            </div>
+          </div>
+        </div>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
@@ -309,6 +371,25 @@
         </span>
       </template>
     </el-dialog>
+    <!-- URL 爬取对话框 -->
+    <el-dialog
+      v-model="showUrlDialog"
+      title="从 URL 添加"
+      width="400px"
+    >
+      <el-form :model="urlForm">
+        <el-form-item label="网址 URL">
+          <el-input v-model="urlForm.url" placeholder="https://example.com" @keyup.enter="parseUrl" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showUrlDialog = false">取消</el-button>
+          <el-button type="primary" :loading="urlLoading" @click="parseUrl">获取信息</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -316,7 +397,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { 
   Plus, Collection, PictureFilled, VideoPlay, Document, Link, 
-  EditPen, Delete, ArrowDown, SwitchButton, Search
+  EditPen, Delete, ArrowDown, SwitchButton, Search, Check
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -330,11 +411,17 @@ const activeTab = ref('all')
 const showAddDialog = ref(false)
 const showCategoryDialog = ref(false)
 const showBatchMoveDialog = ref(false)
+const showUrlDialog = ref(false)
+const urlLoading = ref(false)
+const urlForm = ref({ url: '' })
+
 const newTag = ref('')
 const newCategoryName = ref('')
 const searchKeyword = ref('')
 const selectedCategory = ref('')
 const selectedItems = ref([])
+const selectAllImages = ref(false)
+const selectedResourceIndices = ref([])
 
 // 分类数据
 const categories = ref([
@@ -352,7 +439,8 @@ const currentItem = ref({
   thumbnail: '',
   description: '',
   tags: [],
-  category_id: ''
+  category_id: '',
+  resources: []
 })
 
 // 批量移动表单
@@ -366,6 +454,14 @@ const formRules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   url: [{ required: true, message: '请输入URL', trigger: 'blur' }]
 }
+
+const imageResources = computed(() => {
+  return currentItem.value.resources?.filter(r => r.type === 'image' || r.type === 'img') || []
+})
+
+const otherResources = computed(() => {
+  return currentItem.value.resources?.filter(r => r.type !== 'image' && r.type !== 'img') || []
+})
 
 // 过滤后的收藏列表
 const filteredCollections = computed(() => {
@@ -433,6 +529,32 @@ async function fetchCategories() {
       ]
       saveCategoriesToLocalStorage()
     }
+  }
+}
+
+// 爬取 URL
+async function parseUrl() {
+  if (!urlForm.value.url) return
+  urlLoading.value = true
+  try {
+    const res = await api.post('/collections/parse', { url: urlForm.value.url })
+    currentItem.value = {
+      ...currentItem.value,
+      title: res.title || '无标题',
+      description: res.description || '',
+      url: urlForm.value.url,
+      thumbnail: res.image || '',
+      type: 'link', // 默认为链接
+      resources: res.resources || []
+    }
+    showUrlDialog.value = false
+    showAddDialog.value = true
+    urlForm.value.url = ''
+    ElMessage.success('解析成功')
+  } catch (e) {
+    ElMessage.error('解析失败: ' + (e.response?.data?.error || e.message))
+  } finally {
+    urlLoading.value = false
   }
 }
 
@@ -703,6 +825,92 @@ function resetForm() {
 // 标签切换
 function handleTabClick(tab) {
   activeTab.value = tab.props.name
+}
+
+function selectResource(res) {
+  // 单选逻辑保持不变，用于“其他资源列表”
+  currentItem.value.url = res.url
+  currentItem.value.type = res.type === 'img' ? 'image' : (res.type === 'audio' ? 'video' : res.type)
+  
+  if (res.type === 'image' || res.type === 'img') {
+     currentItem.value.thumbnail = res.url
+     currentItem.value.type = 'image'
+  } else if (res.type === 'video') {
+     currentItem.value.type = 'video'
+  } else if (res.type === 'audio') {
+     currentItem.value.type = 'video' 
+  }
+  ElMessage.success('已选择资源')
+}
+
+// 切换资源选中状态（用于批量）
+function toggleResourceSelection(idx) {
+  const index = selectedResourceIndices.value.indexOf(idx)
+  if (index === -1) {
+    selectedResourceIndices.value.push(idx)
+  } else {
+    selectedResourceIndices.value.splice(index, 1)
+  }
+  // 如果单选，也更新主表单
+  if (selectedResourceIndices.value.length === 1) {
+    selectResource(imageResources.value[selectedResourceIndices.value[0]])
+  }
+  selectAllImages.value = selectedResourceIndices.value.length === imageResources.value.length
+}
+
+function handleSelectAllImages(val) {
+  if (val) {
+    selectedResourceIndices.value = imageResources.value.map((_, idx) => idx)
+  } else {
+    selectedResourceIndices.value = []
+  }
+}
+
+async function batchAddImages() {
+  if (selectedResourceIndices.value.length === 0) return
+  
+  const selectedRes = selectedResourceIndices.value.map(idx => imageResources.value[idx])
+  
+  let successCount = 0
+  for (const res of selectedRes) {
+    // 关键修复：深拷贝 currentItem 并清空 id，确保是新记录
+    const newItem = JSON.parse(JSON.stringify(currentItem.value))
+    newItem.title = newItem.title.replace(/\s\(\d+\)$/, '') + ` (${successCount + 1})`
+    newItem.url = res.url
+    newItem.thumbnail = res.url
+    newItem.type = 'image'
+    newItem.id = 0 // 明确置为 0 或 null
+
+    try {
+      // 构造请求数据
+      const collectionData = { ...newItem, tags: Array.isArray(newItem.tags) ? newItem.tags.join(',') : newItem.tags }
+      const data = await api.post('/collections', collectionData)
+      
+      // 修正返回数据的 tags 格式
+      if (typeof data.tags === 'string') {
+          data.tags = data.tags.split(',').filter(tag => tag)
+      }
+      
+      collections.value.unshift(data)
+      successCount++
+    } catch (e) {
+      console.error('批量添加失败', e)
+    }
+  }
+  
+  ElMessage.success(`成功添加 ${successCount} 张图片`)
+  showAddDialog.value = false
+  resetForm()
+}
+
+function getResourceTypeTag(type) {
+  const map = {
+    image: 'success',
+    img: 'success',
+    video: 'danger',
+    audio: 'warning'
+  }
+  return map[type] || 'info'
 }
 
 // 工具函数
@@ -1226,6 +1434,121 @@ watch(categories, () => {
 .tag-input {
   width: 120px;
   margin-top: 8px;
+}
+
+.detected-resources {
+  margin-top: 20px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}
+
+.detected-resources h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.resource-list {
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.resource-section {
+  margin-bottom: 10px;
+}
+
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.resource-grid-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+}
+
+.resource-grid-item.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.resource-grid-item:hover {
+  border-color: var(--primary-color);
+}
+
+.resource-grid-item .el-image {
+  width: 100%;
+  height: 100%;
+}
+
+.resource-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.resource-grid-item:hover .resource-overlay {
+  opacity: 1;
+}
+
+.resource-overlay .el-icon {
+  color: white;
+  font-size: 20px;
+}
+
+.image-slot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f7fa;
+  color: #909399;
+}
+
+.resource-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s;
+}
+
+.resource-item:last-child {
+  border-bottom: none;
+}
+
+.resource-item:hover {
+  background-color: var(--hover-bg);
+}
+
+.resource-url {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
 .dialog-footer {

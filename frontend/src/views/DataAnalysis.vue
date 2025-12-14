@@ -166,6 +166,9 @@ const chartInstance = ref(null)
 const aiAnalysis = ref('')
 const aiLoading = ref(false)
 
+// 上传接口地址
+const uploadUrl = computed(() => `${config.api.baseURL}/files/upload`)
+
 // 上传请求头 - 包含JWT token
 const uploadHeaders = computed(() => {
   const token = localStorage.getItem('token')
@@ -211,19 +214,19 @@ const handleUploadSuccess = async (response, file) => {
 }
 
 const handleUploadError = (error) => {
-  // 解析错误信息
   let errorMsg = '文件上传失败'
   try {
-    const errorData = JSON.parse(error.message)
-    if (errorData && errorData.error) {
-      errorMsg += `: ${errorData.error}`
+    const status = error?.response?.status
+    const data = error?.response?.data
+    const serverMsg = data?.message || data?.error
+    if (serverMsg) {
+      errorMsg = serverMsg
+    } else if (status) {
+      errorMsg += ` (HTTP ${status})`
+    } else if (error?.message) {
+      errorMsg += `: ${error.message}`
     }
-  } catch {
-    // 如果无法解析JSON，使用原始错误信息
-    if (error.response && error.response.status) {
-      errorMsg += ` (HTTP ${error.response.status})`
-    }
-  }
+  } catch {}
   ElMessage.error(errorMsg)
 }
 
@@ -776,4 +779,3 @@ onMounted(() => {
   line-height: 1.6;
 }
 </style>
-const uploadUrl = computed(() => `${config.api.baseURL}/files/upload`)

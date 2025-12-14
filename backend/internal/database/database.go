@@ -61,6 +61,7 @@ func autoMigrate() error {
 		&model.ChatMessage{},
 		&model.Collection{},
 		&model.Event{},
+		&model.Post{},
 	)
 }
 

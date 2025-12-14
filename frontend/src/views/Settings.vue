@@ -38,104 +38,24 @@
         </el-card>
 
         <el-card style="margin-top: 20px">
-          <template #header>
-            <span>🤖 AI 聊天设置</span>
-          </template>
-
-          <div class="setting-item">
-            <label>AI API Key</label>
-            <el-input
-              v-model="aiSettings.apiKey"
-              type="password"
-              placeholder="输入 API Key..."
-              show-password
-              @change="saveAISettings"
-            />
-          </div>
-
-          <div class="setting-item">
-            <label>API URL</label>
-            <el-input
-              v-model="aiSettings.apiUrl"
-              placeholder="例如: https://api.openai.com/v1/chat/completions"
-              @change="saveAISettings"
-            />
-          </div>
-
-          <div class="setting-item">
-            <label>AI 模型</label>
-            <el-select v-model="aiSettings.model" placeholder="选择模型" @change="handleModelChange" style="width: 100%">
-              <el-option label="GPT-3.5 Turbo" value="gpt-3.5-turbo" />
-              <el-option label="GPT-4" value="gpt-4" />
-              <el-option label="GPT-4 Turbo" value="gpt-4-turbo-preview" />
-              <el-option label="Claude 3 Sonnet" value="claude-3-sonnet" />
-              <el-option label="Claude 3 Opus" value="claude-3-opus" />
-              <el-option label="DeepSeek Chat" value="deepseek-chat" />
-              <el-option label="自定义" value="custom" />
-            </el-select>
-          </div>
-
-          <div class="setting-item">
-            <el-alert title="AI 配置说明" type="warning" :closable="false">
-              <p>• API Key 存储在本地浏览器，不会上传到服务器</p>
-              <p>• 支持 OpenAI、Claude、Gemini 等多种 API</p>
-              <p>• 测试连接前请确保 API Key 有效</p>
-            </el-alert>
-          </div>
-
-          <div class="setting-item">
-            <el-button type="primary" @click="testAIConnection" :loading="testing">测试 AI 连接</el-button>
-          </div>
+          <!-- 已移除 AI 聊天设置 (迁移至侧边栏) -->
         </el-card>
       </el-col>
 
       <el-col :span="12">
         <el-card>
           <template #header>
-            <span>🎵 音乐设置</span>
-          </template>
-
-
-
-          <div class="setting-item" style="margin-top: 30px">
-            <el-alert title="提示" type="info" :closable="false">
-              <p>• 主题更改会立即生效</p>
-  
-              <p>• 所有设置自动保存</p>
-            </el-alert>
-          </div>
-        </el-card>
-
-        <el-card style="margin-top: 20px">
-          <template #header>
             <span>ℹ️ 系统信息</span>
           </template>
 
           <div class="info-item">
             <span>版本</span>
-            <el-tag>v1.0.3</el-tag>
+            <el-tag>v3.0.1</el-tag>
           </div>
-
+          
           <div class="info-item">
-            <span>前端</span>
-            <el-tag type="success">Vue 3 + Element Plus</el-tag>
-          </div>
-
-          <div class="info-item">
-            <span>后端</span>
-            <el-tag type="warning">Go + Gin</el-tag>
-          </div>
-
-          <div class="info-item">
-            <span>数据库</span>
-            <el-tag type="danger">MySQL</el-tag>
-          </div>
-
-          <div class="info-item">
-            <span>AI 状态</span>
-            <el-tag :type="aiSettings.apiKey ? 'success' : 'info'">
-              {{ aiSettings.apiKey ? '已配置' : '未配置' }}
-            </el-tag>
+            <span>技术栈</span>
+            <el-tag type="success">Vue 3 + Go + Gin</el-tag>
           </div>
         </el-card>
       </el-col>
@@ -178,24 +98,24 @@ const uploadHeaders = computed(() => {
 const applyThemeTemplate = () => {
   const templates = {
     default: {
-      primary_color: '#000000',
-      secondary_color: '#ffffff'
+      primary_color: '#409eff',
+      secondary_color: '#f56c6c'
     },
     neon: {
-      primary_color: '#00ff00',
+      primary_color: '#00ffff',
       secondary_color: '#ff00ff'
     },
     forest: {
-      primary_color: '#006400',
-      secondary_color: '#228B22'
+      primary_color: '#22c55e',
+      secondary_color: '#16a34a'
     },
     ocean: {
-      primary_color: '#000080',
-      secondary_color: '#00BFFF'
+      primary_color: '#0093e9',
+      secondary_color: '#80d0c7'
     },
     sunset: {
-      primary_color: '#FF6347',
-      secondary_color: '#FFD700'
+      primary_color: '#f97316',
+      secondary_color: '#ef4444'
     }
   }
 
@@ -203,6 +123,14 @@ const applyThemeTemplate = () => {
   if (selectedTemplate) {
     theme.value.primary_color = selectedTemplate.primary_color
     theme.value.secondary_color = selectedTemplate.secondary_color
+    
+    // 立即应用到 Store 以便获得即时视觉反馈
+    themeStore.theme.theme_template = theme.value.theme_template
+    themeStore.theme.primary_color = theme.value.primary_color
+    themeStore.theme.secondary_color = theme.value.secondary_color
+    themeStore.applyTheme()
+    
+    // 保存到后端
     saveTheme()
     ElMessage.success('主题模板已应用')
   }

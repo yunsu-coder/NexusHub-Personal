@@ -120,6 +120,35 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	common.Created(c, response)
 }
 
+func (h *FileHandler) Rename(c *gin.Context) {
+	userID := middleware.GetCurrentUserID(c)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		logger.Warn("Invalid file ID for rename: %v", err)
+		common.BadRequest(c, "Invalid file ID")
+		return
+	}
+
+	var req struct {
+		NewName string `json:"new_name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.BadRequest(c, "New name is required")
+		return
+	}
+
+	if err := h.service.Rename(uint(id), userID, req.NewName); err != nil {
+		if err == common.ErrFileNotFound {
+			common.NotFound(c, "File not found")
+		} else {
+			common.InternalServerError(c, "Failed to rename file")
+		}
+		return
+	}
+
+	common.SuccessWithMessage(c, "File renamed successfully", nil)
+}
+
 func (h *FileHandler) Download(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"nexushub-personal/internal/database"
 	"nexushub-personal/internal/handler"
 	"nexushub-personal/internal/middleware"
 
@@ -17,6 +18,15 @@ func SetupRouter() *gin.Engine {
 	// Serve static files from uploads directory
 	r.Static("/uploads", "./storage/uploads")
 
+	// Root handler
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "online",
+			"message": "NexusHub Backend API Server",
+			"version": "v3.0.1",
+		})
+	})
+
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -32,6 +42,11 @@ func SetupRouter() *gin.Engine {
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 		}
+
+		// Health check (v1)
+		v1.GET("/health", func(c *gin.Context) {
+			c.JSON(200, gin.H{"status": "ok"})
+		})
 
 		// Apply optional authentication - allows guest access
 		v1.Use(middleware.OptionalAuthMiddleware())
@@ -101,6 +116,7 @@ func SetupRouter() *gin.Engine {
 			files.GET("/category/:category", fileHandler.GetByCategory)
 			files.POST("/upload", fileHandler.Upload)
 			files.GET("/download/:id", fileHandler.Download)
+			files.PUT("/:id/rename", fileHandler.Rename)
 			files.DELETE("/:id", fileHandler.Delete)
 		}
 
@@ -128,9 +144,34 @@ func SetupRouter() *gin.Engine {
 			collection.GET("", collectionHandler.GetAllCollections)
 			collection.GET("/:id", collectionHandler.GetCollectionByID)
 			collection.POST("", collectionHandler.CreateCollection)
+			collection.POST("/parse", collectionHandler.ParseURLHandler)
 			collection.PUT("/:id", collectionHandler.UpdateCollection)
 			collection.DELETE("/:id", collectionHandler.DeleteCollection)
 		}
+
+		// Code Arena
+		codeHandler := handler.NewCodeHandler()
+		code := v1.Group("/code")
+		{
+			code.POST("/run", codeHandler.RunCode)
+		}
+
+		// Blog
+		blogHandler := handler.NewBlogHandler(database.DB)
+		blog := v1.Group("/blog")
+		{
+			blog.GET("", blogHandler.GetAllPosts)
+			blog.POST("", blogHandler.CreatePost)
+			blog.PUT("/:id", blogHandler.UpdatePost)
+			blog.DELETE("/:id", blogHandler.DeletePost)
+		}
+		// Monitor
+		monitorHandler := handler.NewMonitorHandler()
+		v1.POST("/monitor/check", monitorHandler.CheckHealth)
+
+		// RSS
+		rssHandler := handler.NewRSSHandler()
+		v1.POST("/rss/feed", rssHandler.GetFeed)
 	}
 
 	return r

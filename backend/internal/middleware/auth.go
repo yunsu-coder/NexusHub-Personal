@@ -97,8 +97,26 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
-		// 如果没有Authorization header,使用默认用户ID
+		// 严格模式：默认情况下，如果没有token，我们应该拒绝敏感操作
+		// 但是为了保持"个人工作站"的易用性，我们允许本地开发环境(localhost)的请求自动获得管理员权限
+		// 或者当配置文件明确设置为"单用户模式"时。
+
+		// 检查是否是本地请求
+		clientIP := c.ClientIP()
+		isLocal := clientIP == "::1" || clientIP == "127.0.0.1" || clientIP == "localhost"
+
 		if authHeader == "" {
+			if isLocal {
+				// 本地请求，自动登录为默认用户
+				c.Set("user_id", uint(config.AppConfig.User.DefaultUserID))
+				c.Set("username", "admin")
+				c.Next()
+				return
+			}
+
+			// 非本地请求，必须登录
+			// 但为了兼容当前前端代码（可能没有发送token），暂时保留宽容策略，但标记为 guest
+			// 实际生产环境应该返回 401
 			c.Set("user_id", uint(config.AppConfig.User.DefaultUserID))
 			c.Set("username", "guest")
 			c.Next()
@@ -118,7 +136,7 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		// Token无效,使用默认用户ID
+		// Token无效，继续作为guest访问
 		c.Set("user_id", uint(config.AppConfig.User.DefaultUserID))
 		c.Set("username", "guest")
 		c.Next()

@@ -28,7 +28,14 @@ func (s *NoteService) Create(note *model.Note) error {
 }
 
 func (s *NoteService) Update(note *model.Note) error {
-	return database.DB.Save(note).Error
+	return database.DB.Model(&model.Note{}).
+		Where("id = ? AND user_id = ?", note.ID, note.UserID).
+		Updates(map[string]interface{}{
+			"title":     note.Title,
+			"content":   note.Content,
+			"tags":      note.Tags,
+			"is_pinned": note.IsPinned,
+		}).Error
 }
 
 func (s *NoteService) Delete(id, userID uint) error {

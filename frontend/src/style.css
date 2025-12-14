@@ -39,11 +39,84 @@
   /* 过渡效果 */
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
-  /* 布局变量 */
-  --header-height: 64px;
-  --sidebar-width: 250px;
-  --border-radius: 12px;
-  --padding: 20px;
+  /* Glassmorphism 全局样式 */
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  --glass-blur: blur(12px);
+}
+
+/* 玻璃拟态卡片 */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 16px;
+  color: #fff;
+}
+
+/* 覆盖 Element Plus 卡片为玻璃风格 */
+.el-card {
+  background: rgba(30, 30, 30, 0.6) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  border-radius: 16px !important;
+}
+
+.el-card__header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+}
+
+.el-table {
+  background: transparent !important;
+  color: #fff !important;
+  --el-table-tr-bg-color: transparent !important;
+  --el-table-header-bg-color: rgba(255,255,255,0.05) !important;
+  --el-table-border-color: rgba(255,255,255,0.1) !important;
+  --el-table-text-color: #fff !important;
+  --el-table-header-text-color: #ddd !important;
+  --el-table-row-hover-bg-color: rgba(255,255,255,0.1) !important;
+}
+
+.el-table th, .el-table tr {
+  background: transparent !important;
+}
+
+.el-drawer, .el-dialog {
+  background: rgba(30, 30, 30, 0.9) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.el-drawer__title, .el-dialog__title {
+  color: #fff !important;
+}
+
+.el-input__wrapper {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.el-input__inner {
+  color: #fff !important;
+}
+
+/* 滚动条隐藏但保留功能 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* 基础重置和基本样式 */

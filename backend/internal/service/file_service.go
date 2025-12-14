@@ -24,24 +24,24 @@ func NewFileService() *FileService {
 
 func (s *FileService) GetAll(userID uint) ([]model.File, error) {
 	var files []model.File
-	err := database.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&files).Error
+	err := database.DB.Where("user_id IN (?, ?)", userID, 0).Order("created_at DESC").Find(&files).Error
 	return files, err
 }
 
 func (s *FileService) GetByID(id, userID uint) (*model.File, error) {
 	var file model.File
-	err := database.DB.Where("id = ? AND user_id = ?", id, userID).First(&file).Error
+	err := database.DB.Where("id = ? AND (user_id = ? OR user_id = 0)", id, userID).First(&file).Error
 	return &file, err
 }
 
 func (s *FileService) GetByCategory(category string, userID uint) ([]model.File, error) {
 	var files []model.File
-	err := database.DB.Where("user_id = ? AND category = ?", userID, category).Order("created_at DESC").Find(&files).Error
+	err := database.DB.Where("category = ? AND user_id IN (?, ?)", category, userID, 0).Order("created_at DESC").Find(&files).Error
 	return files, err
 }
 
 func (s *FileService) Upload(fileHeader *multipart.FileHeader, userID uint) (*model.File, error) {
-	// 允许访客用户上传文件（userID = 0）	
+	// 允许访客用户上传文件（userID = 0）
 	// 其他验证保持不变
 
 	// 验证文件上传 - 不限制扩展名类型,只限制大小
@@ -154,6 +154,37 @@ func (s *FileService) Upload(fileHeader *multipart.FileHeader, userID uint) (*mo
 	return file, nil
 }
 
+func (s *FileService) Rename(id, userID uint, newName string) error {
+	// 验证文件名
+	safeName := validator.SanitizeFilePath(newName)
+	if safeName == "" {
+		return common.ErrInvalidFileName
+	}
+
+	var file model.File
+	if err := database.DB.Where("id = ? AND (user_id = ? OR user_id = 0)", id, userID).First(&file).Error; err != nil {
+		return common.ErrFileNotFound
+	}
+
+	// 保持扩展名
+	ext := filepath.Ext(file.FileName)
+	if filepath.Ext(safeName) == "" {
+		safeName += ext
+	}
+
+	oldPath := file.FilePath
+	newPath := filepath.Join(filepath.Dir(oldPath), safeName)
+
+	if err := os.Rename(oldPath, newPath); err != nil {
+		logger.Error("Failed to rename physical file: %v", err)
+		return common.ErrInternalServer
+	}
+
+	file.FileName = safeName
+	file.FilePath = newPath
+	return database.DB.Save(&file).Error
+}
+
 func (s *FileService) Delete(id, userID uint) error {
 	// 验证ID
 	if err := validator.ValidateID(id); err != nil {
@@ -182,17 +213,24 @@ func (s *FileService) Delete(id, userID uint) error {
 
 	// 查询文件记录
 	var file model.File
-	if err := tx.Where("id = ? AND user_id = ?", id, userID).First(&file).Error; err != nil {
+	if err := tx.Where("id = ? AND (user_id = ? OR user_id = 0)", id, userID).First(&file).Error; err != nil {
 		tx.Rollback()
 		logger.Warn("File not found for deletion: id=%d, user_id=%d", id, userID)
 		return common.ErrFileNotFound
 	}
 
 	// 删除数据库记录(软删除)
-	if err := tx.Delete(&file).Error; err != nil {
+	result := tx.Delete(&file)
+	if result.Error != nil {
 		tx.Rollback()
-		logger.Error("Failed to delete file record from database: %v, id=%d", err, id)
+		logger.Error("Failed to delete file record from database: %v, id=%d", result.Error, id)
 		return fmt.Errorf("%w: database delete failed", common.ErrFileDeleteFailed)
+	}
+
+	if result.RowsAffected == 0 {
+		tx.Rollback()
+		logger.Warn("No file record deleted (likely permission issue): id=%d, user_id=%d", id, userID)
+		return common.ErrFileNotFound
 	}
 
 	// 提交事务

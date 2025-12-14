@@ -1,801 +1,534 @@
 <template>
   <div class="ai-chat-page">
-    <el-container class="chat-container">
-      <!-- 左侧会话列表 -->
-      <el-aside width="280px" class="session-list">
-        <div class="session-header">
-          <h3>AI 会话</h3>
-          <el-button type="primary" circle @click="createNewSession" :icon="Plus" size="small" />
+    <div class="chat-container glass-panel">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <div class="header-left">
+          <h3>Nexus AI</h3>
+          <el-tag size="small" effect="plain" round>{{ aiSettings.model }}</el-tag>
         </div>
-        <div class="sessions">
-          <div 
-            v-for="session in sessions" 
-            :key="session.id"
-            class="session-item"
-            :class="{ active: session.id === currentSessionId }"
-            @click="switchSession(session.id)"
-          >
-            <div class="session-info">
-              <div class="session-title">{{ session.title }}</div>
-              <div class="session-time">{{ formatSessionTime(session.updated_at) }}</div>
+        <div class="header-right">
+          <el-tooltip content="清空会话">
+            <el-button circle :icon="Delete" size="small" @click="clearCurrentSession" />
+          </el-tooltip>
+          <el-tooltip content="设置">
+            <el-button circle :icon="Setting" size="small" @click="showSettingsDrawer = true" />
+          </el-tooltip>
+        </div>
+      </div>
+
+      <!-- Chat Messages -->
+      <div class="chat-messages" ref="messagesRef">
+        <div v-if="currentSession.messages.length === 0" class="empty-state">
+          <div class="ai-avatar-large">
+             <div class="pulse-ring"></div>
+             <el-icon><Cpu /></el-icon>
+          </div>
+          <h2>How can I help you today?</h2>
+          <div class="suggestion-chips">
+            <div class="chip" @click="inputMessage = '帮我写一份周报'">
+              <el-icon><Document /></el-icon> 写周报
             </div>
-            <el-button 
-              type="danger" 
-              text 
-              circle 
-              size="small"
-              :icon="Delete"
-              @click.stop="deleteSession(session.id)"
-            />
-          </div>
-        </div>
-      </el-aside>
-
-      <!-- 右侧聊天区域 -->
-      <el-main class="chat-main">
-        <div class="chat-header">
-          <div class="session-actions">
-            <h3>{{ currentSession.title }}</h3>
-            <el-button 
-              type="primary" 
-              text 
-              size="small"
-              @click="renameSession"
-            >
-              重命名
-            </el-button>
-            <el-button 
-              type="warning" 
-              text 
-              size="small"
-              @click="clearCurrentSession"
-            >
-              清空会话
-            </el-button>
-            <el-button 
-              type="success" 
-              text 
-              size="small"
-              @click="showSettings = true"
-            >
-              设置
-            </el-button>
-          </div>
-        </div>
-
-        <!-- 聊天消息区域 -->
-        <div class="chat-messages" ref="messagesRef">
-          <div v-for="(message, index) in currentSession.messages" :key="message.id || index" class="message">
-            <div :class="['message-content', message.role]">
-              <div class="message-header">
-                <span class="message-role">{{ message.role === 'assistant' ? 'AI' : '我' }}</span>
-                <span class="message-time">{{ formatMessageTime(message.created_at) }}</span>
-              </div>
-              <div 
-                class="markdown-content" 
-                v-html="renderMarkdown(message.content)"
-              ></div>
-              <div class="message-actions">
-                <el-button 
-                  type="text" 
-                  size="small"
-                  @click="copyMessage(message.content)"
-                >
-                  复制
-                </el-button>
-                <el-button 
-                  type="text" 
-                  size="small"
-                  @click="replyToMessage(message)"
-                >
-                  回复
-                </el-button>
-              </div>
+            <div class="chip" @click="inputMessage = '解释一下量子纠缠'">
+              <el-icon><Reading /></el-icon> 解释概念
+            </div>
+            <div class="chip" @click="inputMessage = '用Python写一个HTTP服务器'">
+              <el-icon><Monitor /></el-icon> 写代码
             </div>
           </div>
-          <div v-if="isTyping" class="typing-indicator">
-            <el-skeleton :rows="3" animated />
-          </div>
         </div>
+        
+        <div v-else class="message-list">
+           <div 
+             v-for="(message, index) in currentSession.messages" 
+             :key="message.id || index" 
+             class="message-row" 
+             :class="message.role"
+           >
+             <div class="message-avatar">
+               <el-avatar v-if="message.role === 'user'" :size="36" :src="aiSettings.userAvatar">User</el-avatar>
+               <div v-else class="ai-avatar-small"><el-icon><Cpu /></el-icon></div>
+             </div>
+             
+             <div class="message-content-wrapper">
+               <div class="message-sender">{{ message.role === 'user' ? 'You' : 'Nexus AI' }}</div>
+               <div class="message-bubble" :class="message.role">
+                 <div class="markdown-body" v-html="renderMarkdown(message.content)"></div>
+               </div>
+               <div class="message-actions">
+                  <el-button link size="small" @click="copyMessage(message.content)">复制</el-button>
+               </div>
+             </div>
+           </div>
+           
+           <div v-if="isTyping" class="message-row assistant">
+             <div class="message-avatar">
+               <div class="ai-avatar-small"><el-icon><Cpu /></el-icon></div>
+             </div>
+             <div class="message-content-wrapper">
+                <div class="typing-indicator">
+                  <span></span><span></span><span></span>
+                </div>
+             </div>
+           </div>
+        </div>
+      </div>
 
-        <!-- 输入区域 -->
-        <div class="input-container">
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-box glass-panel">
           <el-input
             v-model="inputMessage"
             type="textarea"
-            :rows="2"
-            placeholder="输入消息... (Enter 发送, Ctrl+Enter 换行)"
+            :autosize="{ minRows: 1, maxRows: 6 }"
+            placeholder="Send a message..."
             resize="none"
-            @keydown="handleKeyDown"
+            class="chat-input"
+            @keydown.enter.exact.prevent="sendMessage"
           />
           <div class="input-actions">
-            <el-button type="primary" :loading="loading" @click="sendMessage">
-              发送
-            </el-button>
+             <el-button text circle :icon="Picture" @click="triggerUpload" />
+             <el-button type="primary" circle :icon="Position" :loading="loading" @click="sendMessage" :disabled="!inputMessage.trim() && !loading" />
           </div>
         </div>
-      </el-main>
-    </el-container>
+        <div class="input-footer">
+           Nexus AI can make mistakes. Consider checking important information.
+        </div>
+      </div>
+    </div>
 
-    <!-- 设置面板 -->
-    <el-drawer
-      v-model="showSettings"
-      title="AI 设置"
-      size="300px"
-      direction="rtl"
-    >
-      <el-form :model="aiSettings" label-width="100px">
-        <el-form-item label="API URL">
-          <el-input v-model="aiSettings.apiUrl" placeholder="例如: https://api.openai.com/v1/chat/completions" />
+    <!-- Settings Drawer -->
+    <el-drawer v-model="showSettingsDrawer" title="AI Configuration" size="350px">
+      <el-form :model="aiSettings" label-position="top">
+        <el-form-item label="API Endpoint">
+          <el-input v-model="aiSettings.apiUrl" placeholder="https://api.openai.com/v1/chat/completions" />
         </el-form-item>
         <el-form-item label="API Key">
           <el-input v-model="aiSettings.apiKey" type="password" show-password />
         </el-form-item>
-        <el-form-item label="模型">
-          <el-select v-model="aiSettings.model" placeholder="选择模型">
-            <el-option label="gpt-4o" value="gpt-4o" />
-            <el-option label="gpt-3.5-turbo" value="gpt-3.5-turbo" />
-            <el-option label="claude-3-opus-20240229" value="claude-3-opus-20240229" />
-            <el-option label="gemini-pro" value="gemini-pro" />
-          </el-select>
+        <el-form-item label="Model">
+          <el-input v-model="aiSettings.model" placeholder="gpt-3.5-turbo" />
         </el-form-item>
-        <el-form-item label="温度">
+        <el-form-item label="Temperature">
           <el-slider v-model="aiSettings.temperature" :min="0" :max="2" :step="0.1" />
         </el-form-item>
-        <el-form-item label="最大响应长度">
-          <el-input-number v-model="aiSettings.maxResponseLength" :min="100" :max="2000" :step="100" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="saveAISettings">保存设置</el-button>
-        </el-form-item>
       </el-form>
+      <template #footer>
+         <el-button type="primary" @click="saveAISettings">Save Settings</el-button>
+      </template>
     </el-drawer>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
-import { ElMessage, ElMessageBox, ElDrawer, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElSlider, ElInputNumber, ElSkeleton } from 'element-plus'
-import { Delete, Plus } from '@element-plus/icons-vue'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/github-dark.css'
+import { Delete, Setting, Position, Picture, Cpu, Document, Reading, Monitor } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { marked } from 'marked'
-import api from '../api'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/atom-one-dark.css'
 
 marked.setOptions({
   highlight: function (code, lang) {
     if (lang && hljs.getLanguage(lang)) {
       return hljs.highlight(code, { language: lang }).value
     }
-    return code
+    return hljs.highlightAuto(code).value
   }
 })
 
-// 引用
 const messagesRef = ref(null)
-
-// 响应式数据
 const inputMessage = ref('')
 const loading = ref(false)
 const isTyping = ref(false)
-const showSettings = ref(false)
-
-// 会话管理
+const showSettingsDrawer = ref(false)
 const sessions = ref([])
 const currentSessionId = ref(null)
+
 const aiSettings = ref({
-  apiUrl: '',
+  apiUrl: 'https://api.openai.com/v1/chat/completions',
   apiKey: '',
   model: 'gpt-3.5-turbo',
   temperature: 0.7,
-  maxResponseLength: 1000
+  userAvatar: ''
 })
 
-// 计算属性
 const currentSession = computed(() => {
-  return sessions.value.find(s => s.id === currentSessionId.value) || {
-    title: '新会话',
-    messages: []
-  }
+  return sessions.value.find(s => s.id === currentSessionId.value) || { messages: [] }
 })
 
-// 页面挂载
-onMounted(() => {
-  loadHistory()
-  loadAISettings()
-})
-
-// 加载历史会话
-const loadHistory = async () => {
-  // 尝试从旧格式加载历史记录
-  const oldHistory = localStorage.getItem('chat_history')
-  if (oldHistory) {
-    try {
-      const oldMessages = JSON.parse(oldHistory)
-      if (oldMessages.length > 0) {
-        // 创建一个新会话并导入旧消息
-        const importSession = {
-          id: 'imported_' + Date.now().toString(),
-          title: '导入的历史记录',
-          messages: oldMessages,
-          created_at: oldMessages[0]?.created_at || new Date().toISOString(),
-          updated_at: oldMessages[oldMessages.length - 1]?.created_at || new Date().toISOString()
-        }
-        sessions.value.unshift(importSession)
-        currentSessionId.value = importSession.id
-        saveSessionsToLocalStorage()
-        
-        // 删除旧格式数据
-        localStorage.removeItem('chat_history')
-        return
-      }
-    } catch (e) {
-      console.error('Failed to load old chat history', e)
-    }
-  }
-  
-  // 正常加载会话
-  loadSessionsFromLocalStorage()
-}
-
-// 加载AI设置
-const loadAISettings = () => {
-  try {
-    const saved = localStorage.getItem('ai_settings')
-    if (saved) {
-      aiSettings.value = JSON.parse(saved)
-    } else {
-      // 默认设置
-      aiSettings.value = {
-        apiUrl: 'https://api.openai.com/v1/chat/completions',
-        apiKey: '',
-        model: 'gpt-3.5-turbo',
-        temperature: 0.7,
-        maxResponseLength: 1000
-      }
-      saveAISettings()
-    }
-  } catch (e) {
-    console.error('Failed to load AI settings', e)
-  }
-}
-
-// 保存AI设置
-const saveAISettings = () => {
-  try {
-    localStorage.setItem('ai_settings', JSON.stringify(aiSettings.value))
-    ElMessage.success('设置已保存')
-    showSettings.value = false
-  } catch (e) {
-    console.error('Failed to save AI settings', e)
-    ElMessage.error('保存设置失败')
-  }
-}
-
-// 会话管理函数
-const createNewSession = () => {
-  const newSession = {
-    id: Date.now().toString(),
-    title: `新会话 ${sessions.value.length + 1}`,
-    messages: [],
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-  sessions.value.unshift(newSession)
-  currentSessionId.value = newSession.id
-  saveSessionsToLocalStorage()
-}
-
-const switchSession = (sessionId) => {
-  currentSessionId.value = sessionId
-  nextTick(() => {
-    scrollToBottom()
-  })
-}
-
-const deleteSession = async (sessionId) => {
-  try {
-    await ElMessageBox.confirm('确定要删除这个会话吗？', '提示', { type: 'warning' })
-    const index = sessions.value.findIndex(s => s.id === sessionId)
-    if (index !== -1) {
-      sessions.value.splice(index, 1)
-      if (sessionId === currentSessionId.value) {
-        if (sessions.value.length > 0) {
-          currentSessionId.value = sessions.value[0].id
-        } else {
-          createNewSession()
-        }
-      }
-      saveSessionsToLocalStorage()
-      ElMessage.success('会话已删除')
-    }
-  } catch (e) {
-    if (e !== 'cancel') {
-      ElMessage.error('删除会话失败')
-    }
-  }
-}
-
-const renameSession = async () => {
-  try {
-    const { value } = await ElMessageBox.prompt('请输入新的会话名称', '重命名会话', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputValue: currentSession.value.title
-    })
-    if (value.trim()) {
-      const session = sessions.value.find(s => s.id === currentSessionId.value)
-      if (session) {
-        session.title = value.trim()
-        saveSessionsToLocalStorage()
-        ElMessage.success('会话已重命名')
-      }
-    }
-  } catch (e) {
-    if (e !== 'cancel') {
-      ElMessage.error('重命名失败')
-    }
-  }
-}
-
-const clearCurrentSession = async () => {
-  try {
-    await ElMessageBox.confirm('确定要清空当前会话的所有消息吗？', '提示', { type: 'warning' })
-    const session = sessions.value.find(s => s.id === currentSessionId.value)
-    if (session) {
-      session.messages = []
-      session.updated_at = new Date().toISOString()
-      saveSessionsToLocalStorage()
-      ElMessage.success('会话已清空')
-    }
-  } catch (e) {
-    if (e !== 'cancel') {
-      ElMessage.error('清空会话失败')
-    }
-  }
-}
-
-// 格式化时间
-const formatSessionTime = (timeStr) => {
-  const date = new Date(timeStr)
-  const now = new Date()
-  const diff = now - date
-  
-  if (diff < 60000) { // 1分钟内
-    return '刚刚'
-  } else if (diff < 3600000) { // 1小时内
-    return `${Math.floor(diff / 60000)}分钟前`
-  } else if (diff < 86400000) { // 1天内
-    return `${Math.floor(diff / 3600000)}小时前`
-  } else {
-    return date.toLocaleDateString()
-  }
-}
-
-const formatMessageTime = (timeStr) => {
-  return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-// 存储管理
-const saveSessionsToLocalStorage = () => {
-  try {
-    localStorage.setItem('chat_sessions', JSON.stringify(sessions.value))
-  } catch (e) {
-    console.error('Failed to save sessions', e)
-  }
-}
-
-const loadSessionsFromLocalStorage = () => {
+const loadHistory = () => {
   const saved = localStorage.getItem('chat_sessions')
   if (saved) {
-    try {
-      sessions.value = JSON.parse(saved)
-      if (sessions.value.length > 0) {
-        currentSessionId.value = sessions.value[0].id
-      } else {
-        createNewSession()
-      }
-    } catch (e) {
-      console.error('Failed to load sessions', e)
-      createNewSession()
-    }
+    sessions.value = JSON.parse(saved)
+    if (sessions.value.length > 0) currentSessionId.value = sessions.value[0].id
+    else createNewSession()
   } else {
     createNewSession()
   }
 }
 
-// 发送消息
-const sendMessage = async () => {
-  if (!inputMessage.value.trim() || !currentSessionId.value) return
+const createNewSession = () => {
+  const newSession = {
+    id: Date.now().toString(),
+    messages: [],
+    created_at: new Date().toISOString()
+  }
+  sessions.value.unshift(newSession)
+  currentSessionId.value = newSession.id
+}
 
-  // 检查AI配置
-  if (!aiSettings.value?.apiKey) {
-    ElMessage.warning('请先在设置中配置 AI API Key')
-    return
+const loadSettings = () => {
+  const saved = localStorage.getItem('ai_settings')
+  if (saved) aiSettings.value = JSON.parse(saved)
+}
+
+const saveAISettings = () => {
+  localStorage.setItem('ai_settings', JSON.stringify(aiSettings.value))
+  ElMessage.success('Settings saved')
+  showSettingsDrawer.value = false
+}
+
+const sendMessage = async () => {
+  if (!inputMessage.value.trim() || loading.value) return
+  
+  const userMsg = inputMessage.value
+  inputMessage.value = ''
+  
+  // 先追加用户消息
+  currentSession.value.messages.push({
+      role: 'user',
+      content: userMsg,
+      created_at: new Date().toISOString()
+  })
+  scrollToBottom()
+
+  // 如果没有配置 API Key，走本地假回复模式，保证可用性
+  if (!aiSettings.value.apiKey) {
+      const assistantMsg = {
+        role: 'assistant',
+        content: `（本地离线模式）\n\n你说的是：\n${userMsg}\n\n当前未配置 AI Key，请在右上角“设置”中填写后即可接入真实模型。`,
+        created_at: new Date().toISOString()
+      }
+      currentSession.value.messages.push(assistantMsg)
+      localStorage.setItem('chat_sessions', JSON.stringify(sessions.value))
+      ElMessage.info('当前处于本地离线演示模式，未调用真实 AI 接口')
+      scrollToBottom()
+      return
   }
 
   loading.value = true
   isTyping.value = true
-  const userMsg = inputMessage.value
-  inputMessage.value = ''
-
-  // 添加用户消息
-  const userMessage = {
-    id: Date.now().toString(),
-    role: 'user',
-    content: userMsg,
-    created_at: new Date().toISOString()
-  }
-  currentSession.value.messages.push(userMessage)
-  scrollToBottom()
-
-  try {
-    // 准备对话历史
-    const conversationHistory = currentSession.value.messages.map(m => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: m.content
-    }))
-
-    // 调用AI API（流式）
-    const response = await fetch(aiSettings.value.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${aiSettings.value.apiKey}`
-      },
-      body: JSON.stringify({
-        model: aiSettings.value.model,
-        messages: conversationHistory,
-        max_tokens: aiSettings.value.maxResponseLength,
-        temperature: aiSettings.value.temperature,
-        stream: true
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`API请求失败: ${response.status}`)
-    }
-
-    // 创建AI回复消息
-    const assistantMessage = {
-      id: Date.now().toString(),
+  
+  // 准备 Assistant 消息（用于流式追加内容）
+  const assistantMsg = {
       role: 'assistant',
       content: '',
       created_at: new Date().toISOString()
-    }
-    currentSession.value.messages.push(assistantMessage)
-    scrollToBottom()
+  }
+  currentSession.value.messages.push(assistantMsg)
+  
+  try {
+    const history = currentSession.value.messages.slice(0, -1).map(m => ({
+        role: m.role,
+        content: m.content
+    }))
+    
+    const response = await fetch(aiSettings.value.apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${aiSettings.value.apiKey}`
+        },
+        body: JSON.stringify({
+            model: aiSettings.value.model,
+            messages: history,
+            temperature: aiSettings.value.temperature,
+            stream: true
+        })
+    })
 
-    // 处理流式响应
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => '')
+        throw new Error(`API Error: ${response.status}${errorText ? ' - ' + errorText : ''}`)
+    }
+
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6)
-          if (data === '[DONE]') continue
-          
-          try {
-            const json = JSON.parse(data)
-            const delta = json.choices?.[0]?.delta?.content || ''
-            if (delta) {
-              assistantMessage.content += delta
-              scrollToBottom()
+    
+    while(true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+        
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+                if (data === '[DONE]') continue
+                try {
+                    const json = JSON.parse(data)
+                    const delta = json.choices[0]?.delta?.content || ''
+                    assistantMsg.content += delta
+                    scrollToBottom()
+                } catch(e) {}
             }
-          } catch (e) {
-            console.error('Failed to parse stream data', e)
-          }
         }
-      }
     }
-
-    // 更新会话时间并保存
-    currentSession.value.updated_at = new Date().toISOString()
-    saveSessionsToLocalStorage()
-    
-    // 保存到后端
-    try {
-      await api.post('/chat/message', { content: userMsg })
-    } catch {
-      // 忽略后端保存失败
-    }
-    
-    ElMessage.success('发送成功')
-  } catch (error) {
-    ElMessage.error(`发送失败: ${error.message}`)
-    // 移除失败的用户消息和空的AI回复
-    if (currentSession.value.messages.length > 0 && currentSession.value.messages[currentSession.value.messages.length - 1].role === 'assistant') {
-      currentSession.value.messages.pop()
-    }
-    if (currentSession.value.messages.length > 0 && currentSession.value.messages[currentSession.value.messages.length - 1].role === 'user') {
-      currentSession.value.messages.pop()
-    }
+  } catch (e) {
+      const msg = e?.message || 'Unknown error'
+      assistantMsg.content += `\n[Error: ${msg}]`
+      ElMessage.error(`AI 请求失败：${msg}`)
   } finally {
-    loading.value = false
-    isTyping.value = false
+      // 统一持久化会话
+      localStorage.setItem('chat_sessions', JSON.stringify(sessions.value))
+      loading.value = false
+      isTyping.value = false
   }
 }
 
-// 回复消息
-const replyToMessage = (message) => {
-  inputMessage.value = `回复: ${message.content}\n\n`
-  nextTick(() => {
-    const inputElement = document.querySelector('.el-textarea__inner')
-    if (inputElement) {
-      inputElement.focus()
-      inputElement.setSelectionRange(inputMessage.value.length, inputMessage.value.length)
-    }
-  })
-}
-
-// 复制消息内容
-const copyMessage = async (content) => {
-  try {
-    await navigator.clipboard.writeText(content)
-    ElMessage.success('复制成功')
-  } catch (error) {
-    ElMessage.error('复制失败')
-  }
-}
-
-// 滚动到底部
 const scrollToBottom = () => {
-  nextTick(() => {
-    if (messagesRef.value) {
-      messagesRef.value.scrollTop = messagesRef.value.scrollHeight
-    }
-  })
-}
-
-// 处理键盘事件
-const handleKeyDown = (event) => {
-  // Enter 发送消息
-  if (event.key === 'Enter' && !event.ctrlKey && !loading.value) {
-    event.preventDefault() // 阻止默认换行
-    sendMessage()
-  }
-}
-
-// 渲染Markdown
-const renderMarkdown = (content) => {
-  return marked(content)
-}
-
-// 监听消息变化，确保新消息也能正确高亮
-watch(
-  () => currentSession.value.messages,
-  () => {
     nextTick(() => {
-      // 重新应用语法高亮到所有代码块
-      const codeBlocks = document.querySelectorAll('.markdown-content pre code')
-      codeBlocks.forEach((block) => {
-        if (!block.classList.contains('hljs')) {
-          hljs.highlightElement(block)
+        if (messagesRef.value) {
+            messagesRef.value.scrollTop = messagesRef.value.scrollHeight
         }
-      })
     })
-  },
-  { deep: true }
-)
+}
+
+const clearCurrentSession = () => {
+    currentSession.value.messages = []
+    localStorage.setItem('chat_sessions', JSON.stringify(sessions.value))
+}
+
+const triggerUpload = () => {
+    ElMessage.info('File upload is a demo feature')
+}
+
+const copyMessage = (text) => {
+    navigator.clipboard.writeText(text)
+    ElMessage.success('Copied')
+}
+
+const renderMarkdown = (text) => marked(text)
+
+onMounted(() => {
+    loadSettings()
+    loadHistory()
+})
 </script>
 
 <style scoped>
 .ai-chat-page {
-  height: calc(100vh - 120px);
-  width: 100%;
-  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
 }
 
 .chat-container {
-  height: 100%;
-}
-
-/* 左侧会话列表 */
-.session-list {
-  border-right: 1px solid #e0e0e0;
-  background-color: #f5f7fa;
-  padding: 0;
-  overflow: hidden;
+  flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.session-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.session-header h3 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.sessions {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.session-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  margin-bottom: 4px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  background-color: white;
-}
-
-.session-item:hover {
-  background-color: #ecf5ff;
-}
-
-.session-item.active {
-  background-color: #409eff;
-  color: white;
-}
-
-.session-info {
-  flex: 1;
-  min-width: 0;
-  margin-right: 8px;
-}
-
-.session-title {
-  font-weight: 500;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
+  background: #fff; /* Fallback */
 }
 
-.session-time {
-  font-size: 12px;
-  opacity: 0.7;
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
-/* 右侧聊天区域 */
-.chat-main {
-  padding: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+@media (prefers-color-scheme: dark) {
+    .glass-panel {
+        background: rgba(30, 30, 30, 0.95);
+        color: #eee;
+    }
 }
 
 .chat-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: white;
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-left h3 { margin: 0; font-size: 16px; }
 
-.session-actions h3 {
-  margin: 0;
-  font-size: 16px;
-  display: inline-block;
-  margin-right: 16px;
-  vertical-align: middle;
-}
-
-/* 聊天消息区域 */
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
-  background-color: #f5f7fa;
-}
-
-.message {
-  margin-bottom: 16px;
+  padding: 20px;
   display: flex;
+  flex-direction: column;
 }
 
-.message-content {
-  max-width: 80%;
-  padding: 12px 16px;
-  border-radius: 12px;
-  position: relative;
-}
-
-.message-content.user {
-  margin-left: auto;
-  background-color: #409eff;
-  color: white;
-  border-bottom-right-radius: 4px;
-}
-
-.message-content.assistant {
-  background-color: white;
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-}
-
-.message-header {
+.empty-state {
+  flex: 1;
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   opacity: 0.8;
 }
 
-.message-role {
-  font-weight: 500;
+.ai-avatar-large {
+  width: 80px;
+  height: 80px;
+  background: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: #fff;
+  margin-bottom: 20px;
+  position: relative;
 }
 
-.message-time {
-  font-size: 11px;
+.pulse-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid #000;
+    animation: pulse 2s infinite;
 }
 
-.markdown-content {
-  line-height: 1.6;
-  word-break: break-word;
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.5; }
+    100% { transform: scale(1.5); opacity: 0; }
 }
 
-.markdown-content p {
-  margin: 0 0 8px 0;
+.suggestion-chips {
+  display: flex;
+  gap: 10px;
+  margin-top: 30px;
+}
+.chip {
+  padding: 10px 20px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.chip:hover {
+  background: #f0f0f0;
+  transform: translateY(-2px);
 }
 
-.markdown-content pre {
-  margin: 8px 0;
-  padding: 12px;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
-  overflow-x: auto;
+.message-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
 
-.markdown-content code {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 14px;
+.message-avatar {
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+.ai-avatar-small {
+    width: 36px;
+    height: 36px;
+    background: #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.message-content-wrapper {
+    flex: 1;
+    min-width: 0;
+}
+.message-sender { font-size: 12px; margin-bottom: 5px; opacity: 0.6; font-weight: 600; }
+
+.message-bubble {
+    padding: 0 15px;
+    line-height: 1.6;
+}
+.message-row.user .message-bubble {
+    /* No bubble for user, plain text or slight bg? */
+    /* Let's keep it simple like ChatGPT */
+}
+
+.markdown-body :deep(pre) {
+    background: #1e1e1e;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+.markdown-body :deep(code) {
+    font-family: 'Consolas', monospace;
 }
 
 .message-actions {
-  margin-top: 8px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.message-row:hover .message-actions { opacity: 1; }
+
+.input-area {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.message-actions .el-button {
-  padding: 2px 8px;
-  font-size: 12px;
+.input-box {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-/* 输入区域 */
-.input-container {
-  padding: 16px;
-  background-color: white;
-  border-top: 1px solid #e0e0e0;
+.chat-input :deep(.el-textarea__inner) {
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    padding: 5px 10px;
 }
 
 .input-actions {
-  margin-top: 8px;
-  display: flex;
-  justify-content: flex-end;
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 10px 0;
 }
 
-/* 打字指示器 */
-.typing-indicator {
-  padding: 12px 16px;
-  background-color: white;
-  border-radius: 12px;
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  max-width: 80%;
+.input-footer {
+    text-align: center;
+    font-size: 11px;
+    opacity: 0.5;
+    margin-top: 10px;
+}
+
+.typing-indicator span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #aaa;
+    border-radius: 50%;
+    margin-right: 4px;
+    animation: typing 1s infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
 }
 </style>

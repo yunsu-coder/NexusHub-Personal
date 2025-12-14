@@ -52,6 +52,21 @@ type File struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+// Post represents a blog post
+type Post struct {
+	ID        uint           `gorm:"primarykey" json:"id"`
+	UserID    uint           `gorm:"not null;index" json:"user_id"`
+	Title     string         `gorm:"size:255;not null" json:"title"`
+	Content   string         `gorm:"type:longtext;not null" json:"content"`
+	Excerpt   string         `gorm:"size:500" json:"excerpt"`
+	Tags      string         `gorm:"size:500" json:"tags"`
+	Cover     string         `gorm:"size:500" json:"cover"`
+	Author    string         `gorm:"size:100" json:"author"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
 // Theme represents user theme preferences
 type Theme struct {
 	ID              uint      `gorm:"primarykey" json:"id"`

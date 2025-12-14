@@ -17,6 +17,12 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/wooden-fish',
+      name: 'WoodenFish',
+      component: () => import('../views/WoodenFish.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/files',
       name: 'Files',
       component: () => import('../views/FileManager.vue'),
@@ -57,6 +63,18 @@ const router = createRouter({
       path: '/collection',
       name: 'Collection',
       component: () => import('../views/Collection.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/code',
+      name: 'CodeArena',
+      component: () => import('../views/CodeArena.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/blog',
+      name: 'Blog',
+      component: () => import('../views/Blog.vue'),
       meta: { requiresAuth: false }
     }
   ]

@@ -9,7 +9,7 @@ const config = {
   // 应用配置
   app: {
     name: 'NexusHub',
-    version: '1.0.3',
+    version: '3.0.1',
   },
 
   // 存储键名

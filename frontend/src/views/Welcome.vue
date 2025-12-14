@@ -36,10 +36,16 @@
           <p>正在加载...</p>
         </div>
         <el-button class="enter-btn" type="primary" @click="enter">立即进入</el-button>
+        <div class="quick-links-row">
+          <el-button size="large" @click="goTo('/notes')">✏️ 笔记</el-button>
+          <el-button size="large" @click="goTo('/todos')">✅ TODO</el-button>
+          <el-button size="large" @click="goTo('/files')">📁 文件</el-button>
+          <el-button size="large" @click="goTo('/chat')">🤖 AI 聊天</el-button>
+        </div>
       </div>
 
       <div class="welcome-footer">
-        <p>v1.0.3 | 功能丰富 | 安全可靠</p>
+        <p>v3.0.1 | 功能丰富 | 安全可靠</p>
       </div>
     </div>
 
@@ -69,12 +75,7 @@ const features = [
 
 
 
-// 自动过渡到仪表盘
-onMounted(() => {
-  setTimeout(() => {
-    router.push('/dashboard')
-  }, 1500)
-})
+// 不再强制自动跳转，保留欢迎页作为首页 Hub
 
 // 烟花动画
 class Firework {
@@ -206,6 +207,10 @@ const showAuthDialog = (type) => {
 
 const enter = () => {
   router.push('/dashboard')
+}
+
+const goTo = (path) => {
+  router.push(path)
 }
 
 const handleAuth = async () => {

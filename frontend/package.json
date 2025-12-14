@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "1.0.3",
+  "version": "3.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@guolao/vue-monaco-editor": "^1.6.0",
+    "@kangc/v-md-editor": "^2.3.18",
     "axios": "^1.13.2",
+    "codemirror": "^6.0.2",
     "echarts": "^6.0.0",
     "element-plus": "^2.12.0",
     "highlight.js": "^11.11.1",
@@ -21,8 +24,10 @@
     "monaco-editor-vue3": "^1.0.5",
     "pdfjs-dist": "^5.4.449",
     "pinia": "^3.0.4",
+    "prismjs": "^1.30.0",
     "vue": "^3.5.24",
     "vue-router": "^4.6.3",
+    "vuedraggable": "^4.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

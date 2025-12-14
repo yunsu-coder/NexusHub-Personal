@@ -2,13 +2,12 @@
 
 > 一个功能强大的个人工作站系统 - 集成文件管理、笔记、数据分析、AI聊天等多种功能
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-3.0.1-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## ✨ 核心功能
 
 - 📁 **文件管理**: 多格式文件上传下载,分类管理
 - 📝 **笔记系统**: Markdown支持,富文本编辑
-- 📊 **数据分析**: CSV/Excel/PDF导入,5种可视化图表
 - ✅ **TODO管理**: 任务追踪,优先级管理
 - 🤖 **AI聊天**: 支持OpenAI/DeepSeek/Claude等多种模型
 - 🎨 **主题定制**: 拟物风格UI,背景图片和音乐
@@ -27,7 +26,6 @@
 - `/dashboard` - 仪表盘
 - `/files` - 文件管理
 - `/notes` - 笔记
-- `/data` - 数据分析
 - `/todos` - TODO管理
 - `/chat` - AI聊天
 - `/settings` - 系统设置
