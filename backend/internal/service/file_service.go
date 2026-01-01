@@ -1,7 +1,6 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -27,7 +26,7 @@ type FileService struct {
 
 func NewFileService() *FileService {
 	s := &FileService{}
-	
+
 	// 检查是否配置了云存储
 	cfg := config.AppConfig.GetCloudStorageConfig()
 	if cfg.Provider != "" {
@@ -53,7 +52,7 @@ func NewFileService() *FileService {
 		s.useCloud = false
 		s.cloudProvider = nil
 	}
-	
+
 	return s
 }
 
@@ -101,9 +100,6 @@ func (s *FileService) Upload(fileHeader *multipart.FileHeader, userID uint) (*mo
 		}
 	}()
 
-	var file *model.File
-	var storagePath string
-
 	if s.useCloud && s.cloudProvider != nil {
 		// 使用云存储上传
 		file, storagePath, err := s.uploadToCloud(fileHeader, userID, category, tx)
@@ -111,7 +107,7 @@ func (s *FileService) Upload(fileHeader *multipart.FileHeader, userID uint) (*mo
 			tx.Rollback()
 			return nil, err
 		}
-		
+
 		if err := tx.Commit().Error; err != nil {
 			// 如果云存储已上传但事务失败，尝试删除云存储文件
 			s.deleteFromCloud(storagePath)

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"nexushub-personal/internal/config"
 	"nexushub-personal/internal/logger"
 
@@ -33,22 +32,22 @@ type MinIOProvider struct {
 // NewMinIOProvider 创建MinIO云存储实例
 func NewMinIOProvider() (*MinIOProvider, error) {
 	cfg := config.AppConfig.GetCloudStorageConfig()
-	
+
 	if cfg.Provider != string(config.ProviderMinIO) {
 		return nil, fmt.Errorf("provider mismatch: expected minio, got %s", cfg.Provider)
 	}
-	
+
 	// 创建MinIO客户端
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 		Secure: cfg.Endpoint != "", // 如果配置了endpoint，则使用HTTPS
 	})
-	
+
 	if err != nil {
 		logger.Error("Failed to create MinIO client: %v", err)
 		return nil, fmt.Errorf("failed to create MinIO client: %w", err)
 	}
-	
+
 	// 检查存储桶是否存在，不存在则创建
 	err = client.MakeBucket(context.Background(), cfg.Bucket, minio.MakeBucketOptions{})
 	if err != nil {
@@ -59,7 +58,7 @@ func NewMinIOProvider() (*MinIOProvider, error) {
 			return nil, fmt.Errorf("failed to create bucket: %w", err)
 		}
 	}
-	
+
 	return &MinIOProvider{
 		client:     client,
 		bucketName: cfg.Bucket,
@@ -71,12 +70,12 @@ func (m *MinIOProvider) Upload(ctx context.Context, objectName string, file []by
 	_, err := m.client.PutObject(ctx, m.bucketName, objectName, bytes.NewReader(file), int64(len(file)), minio.PutObjectOptions{
 		ContentType: contentType,
 	})
-	
+
 	if err != nil {
 		logger.Error("Failed to upload file to MinIO: %v, object: %s", err, objectName)
 		return fmt.Errorf("failed to upload file to MinIO: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -88,14 +87,14 @@ func (m *MinIOProvider) Download(ctx context.Context, objectName string) ([]byte
 		return nil, fmt.Errorf("failed to download file from MinIO: %w", err)
 	}
 	defer object.Close()
-	
+
 	// 获取文件大小
 	stat, err := object.Stat()
 	if err != nil {
 		logger.Error("Failed to get file info from MinIO: %v, object: %s", err, objectName)
 		return nil, fmt.Errorf("failed to get file info from MinIO: %w", err)
 	}
-	
+
 	// 读取文件内容
 	fileBytes := make([]byte, stat.Size)
 	_, err = object.Read(fileBytes)
@@ -103,19 +102,19 @@ func (m *MinIOProvider) Download(ctx context.Context, objectName string) ([]byte
 		logger.Error("Failed to read file from MinIO: %v, object: %s", err, objectName)
 		return nil, fmt.Errorf("failed to read file from MinIO: %w", err)
 	}
-	
+
 	return fileBytes, nil
 }
 
 // GetFileURL 获取文件访问URL
 func (m *MinIOProvider) GetFileURL(ctx context.Context, objectName string) (string, error) {
 	cfg := config.AppConfig.GetCloudStorageConfig()
-	
+
 	// 如果配置了自定义域名或endpoint，使用该地址
 	if cfg.Endpoint != "" {
 		return cfg.Endpoint + "/" + m.bucketName + "/" + objectName, nil
 	}
-	
+
 	// 否则使用默认的MinIO URL格式
 	// 注意：这里假设MinIO服务器地址是通过配置文件获取的
 	// 在实际项目中，您可能需要从配置中获取服务器地址
@@ -126,11 +125,11 @@ func (m *MinIOProvider) GetFileURL(ctx context.Context, objectName string) (stri
 // Delete 从MinIO删除文件
 func (m *MinIOProvider) Delete(ctx context.Context, objectName string) error {
 	err := m.client.RemoveObject(ctx, m.bucketName, objectName, minio.RemoveObjectOptions{})
-	
+
 	if err != nil {
 		logger.Error("Failed to delete file from MinIO: %v, object: %s", err, objectName)
 		return fmt.Errorf("failed to delete file from MinIO: %w", err)
 	}
-	
+
 	return nil
 }
