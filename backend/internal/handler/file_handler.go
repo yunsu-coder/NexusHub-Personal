@@ -23,16 +23,33 @@ func NewFileHandler() *FileHandler {
 
 func (h *FileHandler) GetAll(c *gin.Context) {
 	userID := middleware.GetCurrentUserID(c)
+	
+	// 解析分页参数
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	
+	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
 
-	files, err := h.service.GetAll(userID)
+	files, total, err := h.service.GetAll(userID, page, pageSize)
 	if err != nil {
 		logger.Error("Failed to get all files: %v, user_id=%d", err, userID)
 		common.InternalServerError(c, "Failed to retrieve files")
 		return
 	}
 
-	logger.Info("Retrieved %d files for user_id=%d", len(files), userID)
-	common.Success(c, files)
+	logger.Info("Retrieved %d files for user_id=%d, page=%d, page_size=%d, total=%d", len(files), userID, page, pageSize, total)
+	common.Success(c, gin.H{
+		"files":      files,
+		"total":      total,
+		"page":       page,
+		"page_size":  pageSize,
+		"total_pages": (total + pageSize - 1) / pageSize,
+	})
 }
 
 func (h *FileHandler) GetByID(c *gin.Context) {

@@ -56,10 +56,27 @@ func NewFileService() *FileService {
 	return s
 }
 
-func (s *FileService) GetAll(userID uint) ([]model.File, error) {
+func (s *FileService) GetAll(userID uint, page, pageSize int) ([]model.File, int64, error) {
 	var files []model.File
-	err := database.DB.Where("user_id IN (?, ?)", userID, 0).Order("created_at DESC").Find(&files).Error
-	return files, err
+	var total int64
+	
+	// 计算偏移量
+	offset := (page - 1) * pageSize
+	
+	// 查询总数
+	db := database.DB.Where("user_id IN (?, ?)", userID, 0)
+	err := db.Model(&model.File{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// 分页查询
+	err = db.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&files).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	return files, total, nil
 }
 
 func (s *FileService) GetByID(id, userID uint) (*model.File, error) {

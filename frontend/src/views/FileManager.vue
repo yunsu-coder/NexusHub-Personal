@@ -200,6 +200,19 @@
           </el-table-column>
         </el-table>
       </div>
+      
+      <!-- 分页组件 -->
+      <div v-if="totalFiles > 0" class="file-pagination">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="totalFiles"
+          @size-change="handlePageSizeChange"
+          @current-change="handleCurrentPageChange"
+        />
+      </div>
     </div>
 
     <!-- 文件详情抽屉 -->
@@ -421,6 +434,12 @@ const isDragging = ref(false)
 const selectedFile = ref(null)
 const drawerVisible = ref(false)
 
+// 分页状态
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalFiles = ref(0)
+const totalPages = ref(1)
+
 // 存储方式选择
 const selectedStorage = ref(config.storageProviders.default)
 const storageOptions = ref(Object.entries(config.storageProviders.providers).map(([key, provider]) => ({
@@ -532,12 +551,35 @@ const filteredFiles = computed(() => {
 const loadFiles = async () => {
   loading.value = true
   try {
-    files.value = await api.get('/files')
+    // 添加分页参数
+    const params = {
+      page: currentPage.value,
+      page_size: pageSize.value
+    }
+    
+    const result = await api.get('/files', { params })
+    // 更新文件列表和分页信息
+    files.value = result.files || []
+    totalFiles.value = result.total || 0
+    totalPages.value = result.total_pages || 1
   } catch (e) {
+    console.error('加载文件失败:', e)
     ElMessage.error('加载文件失败')
   } finally {
     loading.value = false
   }
+}
+
+// 分页事件处理
+const handlePageSizeChange = (newSize) => {
+  pageSize.value = newSize
+  currentPage.value = 1 // 重置到第一页
+  loadFiles()
+}
+
+const handleCurrentPageChange = (newPage) => {
+  currentPage.value = newPage
+  loadFiles()
 }
 
 // 文件选择处理
@@ -1284,6 +1326,30 @@ onUnmounted(() => {
   overflow-y: auto;
   position: relative;
   padding: 0 10px; /* space for scrollbar */
+}
+
+/* 分页样式 */
+.file-pagination {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+/* 调整分页组件样式 */
+.file-pagination :deep(.el-pagination) {
+  margin: 0;
+}
+
+.file-pagination :deep(.el-pagination__sizes) {
+  margin-right: 20px;
+}
+
+.file-pagination :deep(.el-pagination__jump) {
+  margin-left: 20px;
 }
 
 /* Grid View */
