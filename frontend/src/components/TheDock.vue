@@ -19,13 +19,7 @@
       <div class="divider"></div>
 
       <!-- 功能按钮 -->
-      <div class="dock-item" @click="$emit('toggle-zen')">
-        <el-tooltip content="专注模式" placement="top" :offset="20">
-          <div class="icon-wrapper zen-btn">
-            <el-icon :size="24"><FullScreen /></el-icon>
-          </div>
-        </el-tooltip>
-      </div>
+
       
       <div class="dock-item" @click="$emit('open-palette')">
         <el-tooltip content="命令面板 (Ctrl+K)" placement="top" :offset="20">
@@ -43,7 +37,7 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { 
   Odometer, Folder, Notebook, List, Collection, 
-  ChatLineRound, Monitor, Reading, FullScreen, Search,
+  ChatLineRound, Monitor, Reading, Search,
   Headset
 } from '@element-plus/icons-vue'
 
@@ -62,7 +56,7 @@ const menuItems = [
   { label: '笔记', path: '/notes', icon: Notebook },
   { label: '目标', path: '/todos', icon: List },
   { label: '收藏', path: '/collection', icon: Collection },
-  { label: 'AI', path: '/chat', icon: ChatLineRound },
+
   { label: '代码', path: '/code', icon: Monitor },
   { label: '博客', path: '/blog', icon: Reading },
 ]
@@ -90,12 +84,13 @@ const navigate = (path) => {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--card-bg);
   backdrop-filter: blur(20px);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
   gap: 12px;
+  transition: all 0.3s ease;
 }
 
 .dock-item {
@@ -108,27 +103,28 @@ const navigate = (path) => {
   width: 50px;
   height: 50px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--hover-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--text-primary);
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
 }
 
 .dock-item:hover .icon-wrapper {
   transform: translateY(-10px) scale(1.2);
-  background: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-md);
   margin: 0 10px; /* 挤开周围图标 */
 }
 
 /* 激活状态 */
 .dock-item.active .icon-wrapper {
-  background: rgba(255, 255, 255, 0.3);
-  color: #409eff;
+  background: var(--card-bg);
+  color: var(--primary-color);
   box-shadow: 0 0 15px rgba(64, 158, 255, 0.3);
+  border-color: var(--primary-color);
 }
 
 .zen-btn {
@@ -142,8 +138,9 @@ const navigate = (path) => {
 .divider {
   width: 1px;
   height: 30px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-color);
   margin: 0 5px;
+  transition: background 0.3s ease;
 }
 
 .dot {
@@ -154,7 +151,8 @@ const navigate = (path) => {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--primary-color);
   opacity: 0.8;
+  transition: background 0.3s ease;
 }
 </style>

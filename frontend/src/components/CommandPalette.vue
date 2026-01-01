@@ -65,7 +65,7 @@ const props = defineProps({
   modelValue: Boolean
 })
 
-const emit = defineEmits(['update:modelValue', 'toggle-zen'])
+const emit = defineEmits(['update:modelValue'])
 
 const router = useRouter()
 const themeStore = useThemeStore()
@@ -85,13 +85,12 @@ const commands = [
   { title: '前往 笔记', desc: 'Go to Notes', icon: Notebook, action: () => router.push('/notes') },
   { title: '前往 TODO', desc: 'Go to Todos', icon: List, action: () => router.push('/todos') },
   { title: '前往 收藏', desc: 'Go to Collection', icon: Collection, action: () => router.push('/collection') },
-  { title: '前往 AI 聊天', desc: 'Go to Chat', icon: ChatLineRound, action: () => router.push('/chat') },
+  
   { title: '前往 代码竞技场', desc: 'Go to Code Arena', icon: Monitor, action: () => router.push('/code') },
   { title: '前往 博客', desc: 'Go to Blog', icon: Reading, action: () => router.push('/blog') },
   
   // 系统动作
   { title: '切换主题', desc: 'Toggle Dark/Light Mode', icon: Moon, action: () => themeStore.toggleTheme() },
-  { title: '专注模式', desc: 'Toggle Zen Mode', icon: FullScreen, action: () => emit('toggle-zen') },
 ]
 
 const filteredCommands = computed(() => {

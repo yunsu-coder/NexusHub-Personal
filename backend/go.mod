@@ -8,6 +8,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mmcdole/gofeed v1.3.0
+	github.com/minio/minio-go/v7 v7.0.74
 	golang.org/x/crypto v0.46.0
 	golang.org/x/net v0.47.0
 	gorm.io/driver/mysql v1.5.7

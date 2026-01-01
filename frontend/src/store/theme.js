@@ -5,14 +5,13 @@ import config from '../config'
 
 export const useThemeStore = defineStore('theme', () => {
   const theme = ref({
-    theme_name: 'dark',
-    primary_color: '#000000',
-    secondary_color: '#ffffff',
-    theme_template: 'default',
-  
+    theme_name: 'light',
+    primary_color: '#409eff',
+    secondary_color: '#f56c6c',
+    theme_template: 'sunset',
   })
 
-  const isDark = ref(true)
+  const isDark = ref(false)
 
   async function loadTheme() {
     try {
@@ -42,10 +41,6 @@ export const useThemeStore = defineStore('theme', () => {
     // 为主题切换添加平滑过渡效果
     root.classList.add('theme-transition')
     
-    // 基础颜色设置
-    root.style.setProperty('--primary-color', theme.value.primary_color)
-    root.style.setProperty('--secondary-color', theme.value.secondary_color)
-
     // 深色/浅色主题切换
     if (isDark.value) {
       document.documentElement.classList.add('dark')
@@ -53,73 +48,100 @@ export const useThemeStore = defineStore('theme', () => {
       document.documentElement.classList.remove('dark')
     }
 
-    // 应用主题模板的完整颜色方案
+    // 应用主题模板的完整颜色方案 - 确保所有主题下文字对比度符合WCAG标准
+    // 所有主题使用单一纯色背景，确保视觉一致性
     const themeConfigs = {
       default: {
         primaryColor: isDark.value ? '#667eea' : '#409eff',
         secondaryColor: isDark.value ? '#f56565' : '#f56c6c',
-        textPrimary: isDark.value ? '#ffffff' : '#303133',
-        textSecondary: isDark.value ? '#a0a0a0' : '#606266',
-        bgColor: isDark.value ? '#121212' : '#f5f7fa',
-        cardBg: isDark.value ? '#1e1e1e' : '#ffffff',
-        sidebarBg: isDark.value ? '#181818' : '#ffffff',
-        borderColor: isDark.value ? '#333333' : '#e4e7ed',
-        gradientPrimary: isDark.value ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'linear-gradient(135deg, #409eff 0%, #67c23a 100%)',
-        gradientCard: isDark.value ? 'linear-gradient(135deg, rgba(30,30,30,0.85) 0%, rgba(18,18,18,0.95) 100%)' : 'linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(245,247,250,0.95) 100%)'
+        textPrimary: isDark.value ? '#ffffff' : '#111827',
+        textSecondary: isDark.value ? '#a1a1aa' : '#4b5563',
+        bgColor: isDark.value ? '#18181b' : '#f3f4f6',
+        cardBg: isDark.value ? '#27272a' : '#ffffff',
+        sidebarBg: isDark.value ? '#27272a' : '#ffffff',
+        borderColor: isDark.value ? '#3f3f46' : '#e5e7eb'
+      },
+      dark: {
+        primaryColor: '#667eea',
+        secondaryColor: '#f56565',
+        textPrimary: '#ffffff',
+        textSecondary: '#a1a1aa',
+        bgColor: '#18181b',
+        cardBg: '#27272a',
+        sidebarBg: '#27272a',
+        borderColor: '#3f3f46'
+      },
+      light: {
+        primaryColor: '#409eff',
+        secondaryColor: '#f56c6c',
+        textPrimary: '#111827',
+        textSecondary: '#4b5563',
+        bgColor: '#f3f4f6',
+        cardBg: '#ffffff',
+        sidebarBg: '#ffffff',
+        borderColor: '#e5e7eb'
+      },
+      highContrast: {
+        primaryColor: '#0066cc',
+        secondaryColor: '#cc0000',
+        textPrimary: '#000000',
+        textSecondary: '#333333',
+        bgColor: '#ffffff',
+        cardBg: '#f0f0f0',
+        sidebarBg: '#f0f0f0',
+        borderColor: '#000000'
       },
       neon: {
         primaryColor: '#00ffff',
         secondaryColor: '#ff00ff',
         textPrimary: '#ffffff',
-        textSecondary: '#00ffff',
-        bgColor: '#0a0a0a',
-        cardBg: '#111111',
-        sidebarBg: '#0d0d0d',
-        borderColor: '#00ffff',
-        gradientPrimary: 'linear-gradient(135deg, #00ffff 0%, #ff00ff 100%)',
-        gradientCard: 'linear-gradient(135deg, rgba(17,17,17,0.95) 0%, rgba(10,10,10,0.98) 100%)'
+        textSecondary: '#e5e7eb',
+        bgColor: '#000000',
+        cardBg: '#171717',
+        sidebarBg: '#171717',
+        borderColor: '#00ffff'
       },
       forest: {
         primaryColor: '#22c55e',
         secondaryColor: '#16a34a',
         textPrimary: '#ffffff',
-        textSecondary: '#86efac',
-        bgColor: '#06391a',
-        cardBg: '#0a4e23',
-        sidebarBg: '#074520',
-        borderColor: '#22c55e',
-        gradientPrimary: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-        gradientCard: 'linear-gradient(135deg, rgba(10,78,35,0.9) 0%, rgba(6,57,26,0.95) 100%)'
+        textSecondary: '#dcfce7',
+        bgColor: '#062e17',
+        cardBg: '#065f46',
+        sidebarBg: '#047857',
+        borderColor: '#16a34a'
       },
       ocean: {
         primaryColor: '#0093e9',
         secondaryColor: '#80d0c7',
         textPrimary: '#ffffff',
-        textSecondary: '#80d0c7',
-        bgColor: '#030b22',
-        cardBg: '#05103d',
-        sidebarBg: '#040d33',
-        borderColor: '#0093e9',
-        gradientPrimary: 'linear-gradient(135deg, #0093e9 0%, #80d0c7 100%)',
-        gradientCard: 'linear-gradient(135deg, rgba(5,16,61,0.9) 0%, rgba(3,11,34,0.95) 100%)'
+        textSecondary: '#bae6fd',
+        bgColor: '#0c102a',
+        cardBg: '#0f172a',
+        sidebarBg: '#1e293b',
+        borderColor: '#0093e9'
       },
       sunset: {
         primaryColor: '#f97316',
         secondaryColor: '#ef4444',
         textPrimary: '#1f2937',
         textSecondary: '#6b7280',
-        bgColor: '#ffedd5',
+        bgColor: '#fef3c7',
         cardBg: '#ffffff',
         sidebarBg: '#fef3c7',
-        borderColor: '#f59e0b',
-        gradientPrimary: 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)',
-        gradientCard: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(254,243,199,0.9) 100%)'
+        borderColor: '#f59e0b'
       }
     }
 
-    const config = themeConfigs[theme.value.theme_template] || themeConfigs.default
+    // 确定当前主题配置
+    let config
+    if (themeConfigs[theme.value.theme_name]) {
+      config = themeConfigs[theme.value.theme_name]
+    } else {
+      config = themeConfigs[theme.value.theme_template] || themeConfigs.default
+    }
     
-    // 应用所有CSS变量
+    // 应用所有CSS变量到文档根元素
     root.style.setProperty('--primary-color', config.primaryColor)
     root.style.setProperty('--secondary-color', config.secondaryColor)
     root.style.setProperty('--text-primary', config.textPrimary)
@@ -127,21 +149,39 @@ export const useThemeStore = defineStore('theme', () => {
     root.style.setProperty('--bg-color', config.bgColor)
     root.style.setProperty('--card-bg', config.cardBg)
     root.style.setProperty('--sidebar-bg', config.sidebarBg)
+    root.style.setProperty('--sidebar-text', config.textPrimary)
     root.style.setProperty('--sidebar-hover', isDark.value ? 'rgba(102, 126, 234, 0.1)' : 'rgba(64, 158, 255, 0.1)')
     root.style.setProperty('--border-color', config.borderColor)
-    root.style.setProperty('--gradient-primary', config.gradientPrimary)
-    root.style.setProperty('--gradient-card', config.gradientCard)
-
-    // 背景图（避免 http 资源导致移动端阻止加载）
-    const bg = normalizeAssetUrl(theme.value.background_image)
-    if (bg) {
-      root.style.setProperty('--app-bg-image', `url('${bg}')`)
-    }
+    
+    // Element Plus 组件主题变量
+    root.style.setProperty('--el-color-primary', config.primaryColor)
+    root.style.setProperty('--el-text-color-primary', config.textPrimary)
+    root.style.setProperty('--el-text-color-regular', config.textPrimary)
+    root.style.setProperty('--el-text-color-secondary', config.textSecondary)
+    root.style.setProperty('--el-bg-color', config.bgColor)
+    root.style.setProperty('--el-bg-color-page', config.bgColor)
+    root.style.setProperty('--el-bg-color-overlay', config.cardBg)
+    root.style.setProperty('--el-border-color', config.borderColor)
+    root.style.setProperty('--el-card-bg-color', config.cardBg)
+    root.style.setProperty('--el-card-border-color', config.borderColor)
+    root.style.setProperty('--el-table-bg-color', config.cardBg)
+    root.style.setProperty('--el-table-text-color', config.textPrimary)
+    root.style.setProperty('--el-table-header-bg-color', isDark.value ? '#27272a' : '#f5f7fa')
+    root.style.setProperty('--el-table-header-text-color', config.textPrimary)
+    root.style.setProperty('--el-input-bg-color', isDark.value ? '#27272a' : '#ffffff')
+    root.style.setProperty('--el-input-text-color', config.textPrimary)
+    root.style.setProperty('--el-input-placeholder-color', config.textSecondary)
+    root.style.setProperty('--el-input-border-color', config.borderColor)
+    root.style.setProperty('--el-dialog-bg-color', config.cardBg)
+    root.style.setProperty('--el-drawer-bg-color', config.cardBg)
+    
+    // 移除固定背景图，确保单一纯色背景
+    root.style.setProperty('--app-bg-image', 'none')
     
     // 移除过渡效果类，以便下次切换时重新应用
     setTimeout(() => {
       root.classList.remove('theme-transition')
-    }, 500)
+    }, 300) // 与过渡时间匹配
   }
 
   function toggleTheme() {
@@ -150,21 +190,73 @@ export const useThemeStore = defineStore('theme', () => {
     saveTheme(theme.value)
   }
 
+  // API接口：获取当前背景色
+  function getCurrentBgColor() {
+    return document.documentElement.style.getPropertyValue('--bg-color') || getComputedStyle(document.documentElement).getPropertyValue('--bg-color')
+  }
+
+  // API接口：获取当前主题配置
+  function getCurrentThemeConfig() {
+    const root = document.documentElement
+    return {
+      primaryColor: getComputedStyle(root).getPropertyValue('--primary-color').trim(),
+      secondaryColor: getComputedStyle(root).getPropertyValue('--secondary-color').trim(),
+      textPrimary: getComputedStyle(root).getPropertyValue('--text-primary').trim(),
+      textSecondary: getComputedStyle(root).getPropertyValue('--text-secondary').trim(),
+      bgColor: getComputedStyle(root).getPropertyValue('--bg-color').trim(),
+      cardBg: getComputedStyle(root).getPropertyValue('--card-bg').trim(),
+      sidebarBg: getComputedStyle(root).getPropertyValue('--sidebar-bg').trim(),
+      borderColor: getComputedStyle(root).getPropertyValue('--border-color').trim()
+    }
+  }
+
+  // API接口：切换到指定主题
+  function switchToTheme(themeName) {
+    if (themeName) {
+      theme.value.theme_name = themeName
+      isDark.value = themeName === 'dark'
+      applyTheme()
+      saveTheme(theme.value)
+    }
+  }
+
+  // API接口：更新背景色
+  function updateBgColor(color) {
+    if (color) {
+      const root = document.documentElement
+      root.classList.add('theme-transition')
+      root.style.setProperty('--bg-color', color)
+      root.style.setProperty('--el-bg-color', color)
+      root.style.setProperty('--el-bg-color-page', color)
+      
+      // 移除过渡效果类
+      setTimeout(() => {
+        root.classList.remove('theme-transition')
+      }, 300)
+    }
+  }
+
   return {
     theme,
     isDark,
     loadTheme,
     saveTheme,
     toggleTheme,
-    applyTheme
+    applyTheme,
+    // API接口方法
+    getCurrentBgColor,
+    getCurrentThemeConfig,
+    switchToTheme,
+    updateBgColor
   }
 })
-  function normalizeAssetUrl(url) {
-    if (!url) return ''
-    try {
-      const u = new URL(url)
-      return u.pathname // 转为相对路径，避免混合内容
-    } catch {
-      return url
-    }
+
+function normalizeAssetUrl(url) {
+  if (!url) return ''
+  try {
+    const u = new URL(url)
+    return u.pathname // 转为相对路径，避免混合内容
+  } catch {
+    return url
   }
+}

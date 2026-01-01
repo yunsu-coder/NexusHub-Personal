@@ -21,11 +21,14 @@ const config = {
 
   // 文件上传配置
   upload: {
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 100 * 1024 * 1024, // 100MB
     acceptedTypes: {
-      image: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
-      document: ['.pdf', '.doc', '.docx', '.txt', '.md'],
-      code: ['.js', '.ts', '.vue', '.jsx', '.tsx', '.go', '.py', '.java'],
+      image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.heic', '.tiff'],
+      document: ['.pdf', '.doc', '.docx', '.txt', '.md', '.rtf', '.xls', '.xlsx', '.ppt', '.pptx'],
+      code: ['.js', '.ts', '.vue', '.jsx', '.tsx', '.go', '.py', '.java', '.c', '.cpp', '.cs', '.php', '.rb', '.rs', '.sh', '.json', '.xml', '.yaml', '.yml'],
+      audio: ['.mp3', '.wav', '.flac', '.ogg', '.aac', '.m4a'],
+      video: ['.mp4', '.webm', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.m4v'],
+      archive: ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'],
       all: '*',
     },
   },

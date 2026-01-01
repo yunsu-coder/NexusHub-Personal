@@ -22,6 +22,26 @@ func Init() error {
 		config.AppConfig.DB.DBName,
 	)
 
+	// First, try to connect to MySQL without specifying database to create it
+	rootDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local",
+		config.AppConfig.DB.User,
+		config.AppConfig.DB.Password,
+		config.AppConfig.DB.Host,
+		config.AppConfig.DB.Port,
+	)
+
+	// Connect to MySQL server (without database)
+	rootDB, err := gorm.Open(mysql.Open(rootDSN), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		log.Printf("Warning: Could not connect to MySQL server: %v", err)
+	} else {
+		// Create database if it doesn't exist
+		rootDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", config.AppConfig.DB.DBName))
+		rootDB.Exec("FLUSH PRIVILEGES")
+	}
+
 	var err error
 	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),

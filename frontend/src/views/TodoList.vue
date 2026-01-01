@@ -50,18 +50,18 @@
             @change="onChange($event, 'pending')"
           >
             <template #item="{ element }">
-              <div class="todo-card glass-panel" @click="editTodo(element)">
-                <div class="card-badges">
-                  <el-tag size="small" :type="getPriorityType(element.priority)">{{ getPriorityText(element.priority) }}</el-tag>
-                  <span class="time-ago">{{ formatTimeAgo(element.created_at) }}</span>
-                </div>
-                <h4 class="card-title">{{ element.title }}</h4>
-                <div class="card-footer">
-                   <el-avatar :size="20" class="assignee-avatar">Me</el-avatar>
-                   <el-button link type="danger" :icon="Delete" @click.stop="deleteTodo(element)" />
-                </div>
-              </div>
-            </template>
+  <div class="todo-card" :class="element.status" @click="editTodo(element)">
+    <div class="card-badges">
+      <el-tag size="small" :type="getPriorityType(element.priority)">{{ getPriorityText(element.priority) }}</el-tag>
+      <span class="time-ago">{{ formatTimeAgo(element.created_at) }}</span>
+    </div>
+    <h4 class="card-title">{{ element.title }}</h4>
+    <div class="card-footer">
+       <el-avatar :size="20" class="assignee-avatar">Me</el-avatar>
+       <el-button link type="danger" :icon="Delete" @click.stop="deleteTodo(element)" />
+    </div>
+  </div>
+</template>
           </draggable>
         </div>
       </div>
@@ -81,17 +81,18 @@
             @change="onChange($event, 'in_progress')"
           >
             <template #item="{ element }">
-              <div class="todo-card glass-panel" @click="editTodo(element)">
-                <div class="card-badges">
-                  <el-tag size="small" :type="getPriorityType(element.priority)">{{ getPriorityText(element.priority) }}</el-tag>
-                </div>
-                <h4 class="card-title">{{ element.title }}</h4>
-                <div class="card-footer">
-                   <el-avatar :size="20" class="assignee-avatar" style="background: #e6a23c">Me</el-avatar>
-                   <el-button link type="danger" :icon="Delete" @click.stop="deleteTodo(element)" />
-                </div>
-              </div>
-            </template>
+  <div class="todo-card" :class="element.status" @click="editTodo(element)">
+    <div class="card-badges">
+      <el-tag size="small" :type="getPriorityType(element.priority)">{{ getPriorityText(element.priority) }}</el-tag>
+      <span class="time-ago">{{ formatTimeAgo(element.created_at) }}</span>
+    </div>
+    <h4 class="card-title">{{ element.title }}</h4>
+    <div class="card-footer">
+       <el-avatar :size="20" class="assignee-avatar">Me</el-avatar>
+       <el-button link type="danger" :icon="Delete" @click.stop="deleteTodo(element)" />
+    </div>
+  </div>
+</template>
           </draggable>
         </div>
       </div>
@@ -111,17 +112,17 @@
             @change="onChange($event, 'completed')"
           >
             <template #item="{ element }">
-              <div class="todo-card glass-panel completed" @click="editTodo(element)">
-                <div class="card-badges">
-                  <el-icon color="#67C23A"><Check /></el-icon>
-                  <span class="done-time">{{ formatTimeAgo(element.updated_at) }}</span>
-                </div>
-                <h4 class="card-title">{{ element.title }}</h4>
-                 <div class="card-footer">
-                   <el-button link type="danger" :icon="Delete" @click.stop="deleteTodo(element)" />
-                </div>
-              </div>
-            </template>
+  <div class="todo-card" :class="element.status" @click="editTodo(element)">
+    <div class="card-badges">
+      <el-icon color="var(--success-color)"><Check /></el-icon>
+      <span class="done-time">{{ formatTimeAgo(element.updated_at) }}</span>
+    </div>
+    <h4 class="card-title">{{ element.title }}</h4>
+     <div class="card-footer">
+       <el-button link type="danger" :icon="Delete" @click.stop="deleteTodo(element)" />
+    </div>
+  </div>
+</template>
           </draggable>
         </div>
       </div>
@@ -353,20 +354,28 @@ onMounted(loadTodos)
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
 }
 
 .todo-header {
-  padding: 15px 25px;
+  padding: 20px 25px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
+
+.todo-header:hover {
+  box-shadow: var(--shadow-md);
+}
+
 .header-left { display: flex; align-items: center; gap: 20px; }
-.header-left h2 { margin: 0; color: #fff; font-size: 20px; }
+.header-left h2 { margin: 0; color: var(--text-primary); font-size: 24px; font-weight: 700; }
 .header-right { display: flex; gap: 15px; }
 .filter-select { width: 130px; }
 .search-input { width: 200px; }
@@ -376,90 +385,199 @@ onMounted(loadTodos)
   flex: 1;
   display: flex;
   gap: 20px;
-  overflow: hidden; /* Allow columns to scroll internally */
+  overflow-x: auto;
+  padding-bottom: 16px;
 }
 
 .kanban-column {
-  flex: 1;
+  flex: 0 0 300px;
   display: flex;
   flex-direction: column;
-  background: rgba(0,0,0,0.2);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
-  padding: 15px;
-  min-width: 280px;
+  padding: 20px;
+  min-height: 400px;
+  transition: all 0.3s ease;
+}
+
+.kanban-column:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .column-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 15px;
-  color: #ddd;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
 }
-.column-header h3 { margin: 0; font-size: 16px; font-weight: 600; flex: 1; }
-.dot { width: 8px; height: 8px; border-radius: 50%; }
-.dot.pending { background: #909399; box-shadow: 0 0 5px #909399; }
-.dot.progress { background: #E6A23C; box-shadow: 0 0 5px #E6A23C; }
-.dot.completed { background: #67C23A; box-shadow: 0 0 5px #67C23A; }
-.count { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+
+.column-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.dot.pending {
+  background: var(--info-color);
+  box-shadow: 0 0 8px var(--info-color);
+}
+
+.dot.progress {
+  background: var(--primary-color);
+  box-shadow: 0 0 8px var(--primary-color);
+}
+
+.dot.completed {
+  background: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
+}
+
+.count {
+  background: var(--bg-light);
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+}
 
 .column-content {
   flex: 1;
   overflow-y: auto;
 }
+
 .drag-area {
-  min-height: 100%;
+  min-height: 300px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .todo-card {
-  padding: 15px;
+  padding: 16px;
   cursor: grab;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-light);
   border-left: 3px solid transparent;
 }
-.todo-card:active { cursor: grabbing; }
+
+.todo-card:active {
+  cursor: grabbing;
+}
+
 .todo-card:hover {
   transform: translateY(-2px);
-  background: rgba(255,255,255,0.1);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+}
+
+.todo-card.pending {
+  border-left-color: var(--info-color);
+}
+
+.todo-card.in_progress {
+  border-left-color: var(--primary-color);
+}
+
+.todo-card.completed {
+  border-left-color: var(--success-color);
 }
 
 .card-badges {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 11px;
-  color: #aaa;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.time-ago, .done-time {
+  color: var(--text-secondary);
 }
 
 .card-title {
   margin: 0 0 12px 0;
   font-size: 14px;
-  color: #eee;
+  font-weight: 600;
+  color: var(--text-primary);
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.completed .card-title {
+  text-decoration: line-through;
+  color: var(--text-secondary);
 }
 
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: auto;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
 }
 
-.completed .card-title { text-decoration: line-through; opacity: 0.6; }
-.completed { border-left-color: #67C23A; }
+.assignee-avatar {
+  background: var(--primary-color) !important;
+  color: white !important;
+}
 
 /* List View */
 .list-view {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  transition: all 0.3s ease;
 }
+
+.list-view:hover {
+  box-shadow: var(--shadow-md);
+}
+
 .list-view :deep(.el-table) {
-  --el-table-text-color: #ddd;
-  --el-table-header-text-color: #fff;
-  --el-table-row-hover-bg-color: rgba(255,255,255,0.1);
+  --el-table-bg-color: transparent;
+  --el-table-border-color: var(--border-color);
+  --el-table-text-color: var(--text-primary);
+  --el-table-header-text-color: var(--text-primary);
+  --el-table-header-bg-color: var(--bg-light);
+  --el-table-row-hover-bg-color: var(--bg-light);
+  --el-table-row-hover-text-color: var(--text-primary);
+  --el-table-row-bg-color: transparent;
+}
+
+.list-view :deep(.el-table__header-wrapper) {
+  background: var(--bg-light);
+  border-radius: 8px 8px 0 0;
+}
+
+.list-view :deep(.el-table__body-wrapper) {
+  background: var(--card-bg);
+  border-radius: 0 0 8px 8px;
+}
+
+/* 基础页面样式 */
+.todo-page {
+  background: var(--bg-color);
+  color: var(--text-primary);
 }
 </style>

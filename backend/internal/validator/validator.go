@@ -31,6 +31,13 @@ func ValidateFileUpload(fileHeader *multipart.FileHeader, maxSize int64, allowed
 
 	// 检查文件扩展名
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	
+	// 如果没有指定允许的文件类型，使用默认支持的文件类型列表
+	if len(allowedExts) == 0 {
+		defaultTypes := getDefaultAcceptedTypes()
+		allowedExts = defaultTypes
+	}
+	
 	if len(allowedExts) > 0 {
 		allowed := false
 		for _, allowedExt := range allowedExts {
@@ -45,6 +52,24 @@ func ValidateFileUpload(fileHeader *multipart.FileHeader, maxSize int64, allowed
 	}
 
 	return nil
+}
+
+// getDefaultAcceptedTypes 获取默认支持的文件类型
+func getDefaultAcceptedTypes() []string {
+	return []string{
+		// 图片格式
+		".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico", ".heic", ".tiff",
+		// 文档格式
+		".pdf", ".doc", ".docx", ".txt", ".md", ".rtf", ".xls", ".xlsx", ".ppt", ".pptx",
+		// 代码格式
+		".js", ".ts", ".vue", ".jsx", ".tsx", ".go", ".py", ".java", ".c", ".cpp", ".cs", ".php", ".rb", ".rs", ".sh", ".json", ".xml", ".yaml", ".yml",
+		// 音频格式
+		".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a",
+		// 视频格式
+		".mp4", ".webm", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".m4v",
+		// 压缩格式
+		".zip", ".rar", ".7z", ".tar", ".gz", ".bz2",
+	}
 }
 
 // ValidateFileName 验证文件名安全性

@@ -12,6 +12,7 @@
             <el-radio-group v-model="theme.theme_name" @change="saveTheme">
               <el-radio-button label="dark">深色</el-radio-button>
               <el-radio-button label="light">浅色</el-radio-button>
+              <el-radio-button label="highContrast">高对比度</el-radio-button>
             </el-radio-group>
           </div>
 
@@ -35,10 +36,6 @@
               <el-radio-button label="sunset">日落主题</el-radio-button>
             </el-radio-group>
           </div>
-        </el-card>
-
-        <el-card style="margin-top: 20px">
-          <!-- 已移除 AI 聊天设置 (迁移至侧边栏) -->
         </el-card>
       </el-col>
 
@@ -77,7 +74,6 @@ const theme = ref({
   primary_color: '#000000',
   secondary_color: '#ffffff',
   theme_template: 'default',
-
 })
 
 const aiSettings = ref({
@@ -136,11 +132,13 @@ const applyThemeTemplate = () => {
   }
 }
 
-
-
 const loadTheme = async () => {
   try {
     theme.value = await api.get('/theme')
+    // 更新到主题仓库并应用
+    themeStore.theme = theme.value
+    themeStore.isDark = theme.value.theme_name === 'dark'
+    themeStore.applyTheme()
   } catch {
     ElMessage.error('加载设置失败')
   }
@@ -184,10 +182,6 @@ const handleModelChange = () => {
   }
   saveAISettings()
 }
-
-
-
-
 
 const testAIConnection = async () => {
   if (!aiSettings.value.apiKey) {

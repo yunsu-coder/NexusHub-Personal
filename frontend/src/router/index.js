@@ -6,9 +6,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'Welcome',
-      component: () => import('../views/Welcome.vue'),
-      meta: { requiresAuth: false }
+      redirect: '/dashboard'
     },
     {
       path: '/dashboard',
@@ -45,12 +43,6 @@ const router = createRouter({
       path: '/todos',
       name: 'TodoList',
       component: () => import('../views/TodoList.vue'),
-      meta: { requiresAuth: false }
-    },
-    {
-      path: '/chat',
-      name: 'Chat',
-      component: () => import('../views/AIChat.vue'),
       meta: { requiresAuth: false }
     },
     {

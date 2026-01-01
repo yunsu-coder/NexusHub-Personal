@@ -1,7 +1,7 @@
 <template>
-  <div class="quick-links-widget glass-card">
+  <div class="quick-links-widget">
     <div class="widget-header">
-      <h3>Quick Links</h3>
+      <h3>快速链接</h3>
       <div class="header-actions">
         <el-button link :icon="Refresh" size="small" @click="checkAllStatus" :loading="checking">刷新状态</el-button>
         <el-button link :icon="Plus" size="small" @click="showAddDialog = true"></el-button>
@@ -14,15 +14,19 @@
         :href="link.url" 
         target="_blank" 
         class="link-item"
+        :class="{ 'offline': link.status === 'offline' }"
       >
-        <div class="status-dot" :class="link.status || 'unknown'"></div>
-        <div class="link-icon">
-          <img :src="getIconUrl(link)" @error="handleIconError($event, link)" />
-        </div>
-        <span class="link-title">{{ link.title }}</span>
-        <div class="latency-tag" v-if="link.latency">{{ link.latency }}ms</div>
-        <div class="delete-btn" @click.prevent="removeLink(index)">
-          <el-icon><Close /></el-icon>
+        <div class="link-card">
+          <div class="status-dot" :class="link.status || 'unknown'"></div>
+          <div class="link-icon">
+            <img :src="getIconUrl(link)" @error="handleIconError($event, link)" />
+            <span class="fallback-text">{{ link.title[0] || '?' }}</span>
+          </div>
+          <span class="link-title">{{ link.title }}</span>
+          <div class="latency-tag" v-if="link.latency">{{ link.latency }}ms</div>
+          <div class="delete-btn" @click.prevent="removeLink(index)">
+            <el-icon><Close /></el-icon>
+          </div>
         </div>
       </a>
     </div>
@@ -130,86 +134,132 @@ const checkAllStatus = async () => {
 
 <style scoped>
 .quick-links-widget {
-  padding: 20px;
+  padding: 24px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   height: 100%;
+}
+
+.quick-links-widget:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .widget-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .widget-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .links-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 16px;
 }
 
 .link-item {
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  display: block;
+}
+
+.link-item.offline {
+  opacity: 0.7;
+}
+
+.link-card {
+  position: relative;
+  background: var(--bg-light);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-decoration: none;
-  color: var(--text-primary);
-  position: relative;
-  transition: transform 0.2s;
-  padding: 10px;
-  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+  min-height: 100px;
 }
 
-.link-item:hover {
-  background: rgba(255,255,255,0.1);
-  transform: translateY(-2px);
+.link-item:hover .link-card {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+  background: var(--card-bg);
 }
 
 .link-icon {
-  width: 48px;
-  height: 48px;
-  background: rgba(255,255,255,0.1);
+  width: 56px;
+  height: 56px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   overflow: hidden;
+  position: relative;
 }
 
 .link-icon img {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
+  transition: opacity 0.3s ease;
 }
 
-.fallback-icon, .fallback-text {
-  font-size: 20px;
-  font-weight: bold;
-  color: #fff;
+.link-icon img[src=""] {
+  opacity: 0;
+}
+
+.fallback-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-color);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.link-icon img[src=""] + .fallback-text,
+.link-icon img.error + .fallback-text {
+  opacity: 1;
 }
 
 .link-title {
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
 }
 
 .delete-btn {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 20px;
-  height: 20px;
-  background: #f56c6c;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  background: var(--danger-color);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -217,11 +267,19 @@ const checkAllStatus = async () => {
   justify-content: center;
   font-size: 12px;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  z-index: 10;
 }
 
 .link-item:hover .delete-btn {
   opacity: 1;
+  transform: scale(1);
+}
+
+.delete-btn:hover {
+  background: #f56c6c;
+  transform: scale(1.1);
 }
 
 /* 状态指示灯 */
@@ -229,21 +287,66 @@ const checkAllStatus = async () => {
   position: absolute;
   top: 8px;
   left: 8px;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 1px solid rgba(0,0,0,0.2);
+  border: 2px solid var(--card-bg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
 }
 
-.status-dot.online { background: #67c23a; box-shadow: 0 0 5px #67c23a; }
-.status-dot.offline { background: #f56c6c; }
-.status-dot.unknown { background: #909399; }
+.status-dot.online { 
+  background: var(--success-color); 
+  box-shadow: 0 0 8px var(--success-color); 
+}
+.status-dot.offline { 
+  background: var(--danger-color); 
+}
+.status-dot.unknown { 
+  background: var(--text-secondary); 
+}
 
 .latency-tag {
   position: absolute;
-  bottom: 2px;
-  right: 5px;
-  font-size: 9px;
-  color: rgba(255,255,255,0.6);
+  bottom: 8px;
+  right: 8px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--bg-light);
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .links-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 12px;
+  }
+  
+  .link-card {
+    min-height: 80px;
+    padding: 12px 8px;
+  }
+  
+  .link-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 8px;
+  }
+  
+  .link-icon img {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .fallback-text {
+    font-size: 20px;
+  }
+  
+  .link-title {
+    font-size: 12px;
+  }
 }
 </style>

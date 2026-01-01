@@ -1,7 +1,5 @@
 <template>
-  <el-container class="app-container" :class="{ 'zen-mode': isZenMode }">
-    <!-- Static Background (Performance Optimized) -->
-    <div class="bg-layer"></div>
+  <el-container class="app-container">
     
     <el-header height="40px" class="app-header glass-panel" v-if="!isWelcomePage">
       <div class="header-left">
@@ -36,19 +34,9 @@
 
     <!-- Dock is fixed at bottom -->
     <TheDock 
-      v-if="!isWelcomePage && !isZenMode"
-      @toggle-zen="toggleZenMode"
+      v-if="!isWelcomePage"
       @open-palette="showCommandPalette = true"
     />
-
-    <!-- Zen Mode Exit Button -->
-    <div
-      v-if="!isWelcomePage && isZenMode"
-      class="zen-exit-button"
-      @click="toggleZenMode"
-    >
-      退出专注模式
-    </div>
 
     <CommandPalette v-model="showCommandPalette" />
   </el-container>
@@ -63,15 +51,16 @@ import TheDock from './components/TheDock.vue'
 import CommandPalette from './components/CommandPalette.vue'
 import api from './api'
 import { ElMessage } from 'element-plus'
+import { useThemeStore } from './store/theme'
 
 const route = useRoute()
 const isWelcomePage = computed(() => route.path === '/')
-const isZenMode = ref(false)
 const showCommandPalette = ref(false)
 const globalLoading = ref(false)
 const currentTimeStr = ref('')
 const latency = ref(0)
 const isOnline = ref(true)
+const themeStore = useThemeStore()
 
 // Time
 const updateTime = () => {
@@ -100,6 +89,9 @@ onMounted(() => {
   timer = setInterval(updateTime, 1000)
   healthTimer = setInterval(checkHealth, 30000)
   
+  // 加载主题设置
+  themeStore.loadTheme()
+  
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('api:loading', handleApiLoading)
 })
@@ -122,10 +114,7 @@ const handleApiLoading = (e) => {
   globalLoading.value = !!e.detail
 }
 
-const toggleZenMode = () => {
-  isZenMode.value = !isZenMode.value
-  ElMessage.info(isZenMode.value ? 'Zen Mode On' : 'Zen Mode Off')
-}
+
 </script>
 
 <style scoped>
@@ -134,26 +123,11 @@ const toggleZenMode = () => {
   width: 100vw;
   overflow: hidden;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #e0e0e0;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
-/* Background - Static High Quality Gradient/Image */
-.bg-layer {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: -1;
-  background: radial-gradient(circle at center, #2b32b2, #1488cc);
-  background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
-  background-size: cover;
-  background-position: center;
-}
-.bg-layer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.5); /* Overlay */
-  backdrop-filter: blur(2px);
-}
+
 
 /* Header */
 .app-header {
@@ -162,23 +136,26 @@ const toggleZenMode = () => {
   align-items: center;
   padding: 0 20px;
   z-index: 100;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .glass-panel {
-  background: rgba(20, 20, 20, 0.6);
+  background: var(--card-bg);
   backdrop-filter: blur(12px);
+  transition: background 0.3s ease;
 }
 
 .logo-text {
   font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.5px;
-  color: #fff;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 .version {
   font-weight: 400;
-  opacity: 0.6;
+  opacity: 0.9;
   font-size: 11px;
   margin-left: 6px;
 }
@@ -197,6 +174,7 @@ const toggleZenMode = () => {
   cursor: pointer;
   opacity: 0.8;
   transition: opacity 0.2s;
+  color: var(--text-secondary);
 }
 .status-item:hover { opacity: 1; }
 
@@ -204,7 +182,8 @@ const toggleZenMode = () => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #666;
+  background: var(--text-secondary);
+  transition: background 0.3s ease;
 }
 .online .status-dot { background: #67c23a; box-shadow: 0 0 4px #67c23a; }
 .offline .status-dot { background: #f56c6c; }
@@ -216,7 +195,7 @@ const toggleZenMode = () => {
   overflow-y: auto;
   /* Fix scrollbar */
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.2) transparent;
+  scrollbar-color: var(--border-color) transparent;
 }
 
 .view-wrapper {
@@ -226,36 +205,7 @@ const toggleZenMode = () => {
   padding-bottom: 100px; 
 }
 
-/* Zen Mode */
-.zen-mode .app-header {
-  transform: translateY(-100%);
-  transition: transform 0.3s;
-}
-.zen-mode .view-wrapper {
-  padding-bottom: 20px;
-}
 
-/* Zen Mode Exit Button */
-.zen-exit-button {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 120;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 12px;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(12px);
-  transition: background 0.2s, transform 0.1s;
-}
-
-.zen-exit-button:hover {
-  background: rgba(0, 0, 0, 0.8);
-  transform: translateY(-1px);
-}
 
 /* Transitions */
 .fade-enter-active, .fade-leave-active {

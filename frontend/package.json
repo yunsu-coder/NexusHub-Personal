@@ -21,7 +21,6 @@
     "marked": "^17.0.1",
     "mathjs": "^15.1.0",
     "monaco-editor": "^0.55.1",
-    "monaco-editor-vue3": "^1.0.5",
     "pdfjs-dist": "^5.4.449",
     "pinia": "^3.0.4",
     "prismjs": "^1.30.0",
