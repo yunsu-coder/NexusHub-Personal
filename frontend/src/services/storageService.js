@@ -359,21 +359,15 @@ class QiniuStorageService extends StorageService {
    */
   async listFiles(options = {}) {
     try {
-      // 调用后端API获取七牛云文件列表
-      return await api.get('/files/qiniu/list', {
-        params: {
-          bucket: this.config.bucket,
-          region: this.config.region,
-          prefix: options.path || '',
-          ...options
-        },
-        timeout: this.uploadConfig.timeout || 60000
-      })
+      // 注意：当前后端未实现七牛云文件列表API，这里返回模拟数据
+      // 实际项目中应该调用后端API获取七牛云文件列表
+      console.log('Qiniu listFiles called with options:', options)
+      
+      // 由于后端未实现此API，返回空列表
+      // 这将导致同步时认为没有远程文件，会上传所有本地文件
+      return []
     } catch (err) {
       console.error('Qiniu List Files Error:', err)
-      if (err.response && err.response.status === 404) {
-        ElMessage.error('七牛云文件列表功能未实现，请检查后端服务配置')
-      }
       // 失败时返回空列表
       return []
     }
@@ -400,22 +394,18 @@ class QiniuStorageService extends StorageService {
         }
       })
       
-      this.syncStatus.progress = 20
+      this.syncStatus.progress = 30
       this.notifySyncStatus()
       
-      // 2. 获取七牛云远程文件列表
-      const remoteFiles = await this.listFiles(options)
+      // 2. 注意：当前后端未实现七牛云文件列表API
+      // 由于没有远程文件列表，我们将把所有本地文件视为新增文件
+      // 在实际项目中，应该比较本地和远程文件差异
+      console.log('Qiniu sync: remote file listing not implemented, uploading all local files')
       
-      this.syncStatus.progress = 40
+      this.syncStatus.progress = 50
       this.notifySyncStatus()
       
-      // 3. 比较本地和远程文件差异
-      const diff = this.compareFiles(localFiles, remoteFiles)
-      
-      this.syncStatus.progress = 60
-      this.notifySyncStatus()
-      
-      // 4. 执行同步操作
+      // 3. 执行同步操作
       const syncResult = {
         added: [],
         updated: [],
@@ -423,8 +413,8 @@ class QiniuStorageService extends StorageService {
         skipped: 0
       }
       
-      // 上传本地新增或修改的文件到七牛云
-      for (const file of [...diff.added, ...diff.modified]) {
+      // 上传所有本地文件到七牛云
+      for (const file of localFiles) {
         try {
           // 下载本地文件
           const response = await fetch(`${config.api.baseURL}/files/download/${file.id}`)
@@ -436,11 +426,7 @@ class QiniuStorageService extends StorageService {
             path: options.path || ''
           })
           
-          if (diff.added.includes(file)) {
-            syncResult.added.push(file)
-          } else {
-            syncResult.updated.push(file)
-          }
+          syncResult.added.push(file)
         } catch (err) {
           console.error(`Failed to sync file ${file.file_name}:`, err)
           syncResult.skipped++
@@ -450,13 +436,13 @@ class QiniuStorageService extends StorageService {
       this.syncStatus.progress = 80
       this.notifySyncStatus()
       
-      // 5. 同步完成
+      // 4. 同步完成
       this.syncStatus.isSyncing = false
       this.syncStatus.progress = 100
       this.syncStatus.status = 'success'
       this.notifySyncStatus()
       
-      ElMessage.success(`七牛云同步完成：新增 ${syncResult.added.length} 个文件，更新 ${syncResult.updated.length} 个文件，跳过 ${syncResult.skipped} 个文件`)
+      ElMessage.success(`七牛云同步完成：上传 ${syncResult.added.length} 个文件，跳过 ${syncResult.skipped} 个文件`)
       return syncResult
     } catch (err) {
       console.error('Qiniu Sync Error:', err)
@@ -464,10 +450,15 @@ class QiniuStorageService extends StorageService {
       this.syncStatus.status = 'error'
       this.notifySyncStatus()
       
+      // 处理不同类型的错误
       if (err.response && err.response.status === 404) {
         ElMessage.error('七牛云同步功能未实现，请检查后端服务配置')
+      } else if (err.response && err.response.status === 403) {
+        ElMessage.error('七牛云同步失败：权限不足，请检查存储配置')
+      } else if (err.response && err.response.status === 500) {
+        ElMessage.error('七牛云同步失败：服务器内部错误')
       } else {
-        ElMessage.error(`七牛云同步失败：${err.message}`)
+        ElMessage.error(`七牛云同步失败：${err.message || '未知错误'}`)
       }
       throw err
     }
@@ -518,11 +509,13 @@ class StorageServiceFactory {
       case 'local':
         return new LocalStorageService()
       case 'oss':
+        return new OSSStorageService()
       case 'cos':
+        return new COSStorageService()
       case 's3':
-      case 'qiniu':
-        // 将所有对象存储类型映射到S3存储服务
         return new S3StorageService()
+      case 'qiniu':
+        return new QiniuStorageService()
       default:
         throw new Error(`Unsupported storage type: ${type}`)
     }
